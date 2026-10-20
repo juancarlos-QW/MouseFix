@@ -1,0 +1,80 @@
+<ui:FluentWindow x:Class="MouseFix.App.DistanceTestWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="Teste de distância" Width="540" Height="720" ResizeMode="CanMinimize"
+                 WindowStartupLocation="CenterOwner" Icon="pack://application:,,,/Assets/mousefix.ico"
+                 ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round">
+    <DockPanel>
+        <ui:TitleBar DockPanel.Dock="Top" Title="Teste de distância" ShowMaximize="False" ShowMinimize="False" />
+
+        <StackPanel Margin="20,4,20,20">
+            <ui:TextBlock TextWrapping="Wrap" Appearance="Secondary"
+                          Text="Verifica se o mouse ou o driver dele (ex.: Razer Synapse) aplica aceleração antes do Windows, e mede o DPI real e o polling rate." />
+
+            <ui:Card Margin="0,12,0,0">
+                <StackPanel>
+                    <ui:TextBlock FontTypography="BodyStrong" Text="Como fazer" />
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,6,0,0"
+                                  Text="1. Encoste o mouse numa régua ou marque dois pontos no mousepad. Informe a distância abaixo." />
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                  Text="2. Com o cursor na área cinza, segure o botão esquerdo, arraste de uma marca até a outra e solte." />
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                  Text="3. Faça 2 ou mais bem devagar (uns 2 segundos cada) e 2 ou mais bem rápidas, sempre a mesma distância." />
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="90" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Text="Distância entre as marcas (cm)" VerticalAlignment="Center" />
+                        <ui:TextBox x:Name="DistanceBox" Grid.Column="1" Text="10" TextChanged="DistanceBox_TextChanged" />
+                    </Grid>
+                </StackPanel>
+            </ui:Card>
+
+            <Border x:Name="TestArea" Height="110" Margin="0,12,0,0" CornerRadius="8" BorderThickness="1"
+                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                <ui:TextBlock x:Name="AreaHint" Text="Segure o botão esquerdo aqui e arraste"
+                              Appearance="Tertiary" HorizontalAlignment="Center" VerticalAlignment="Center" FontTypography="BodyStrong" />
+            </Border>
+
+            <ui:Card Margin="0,12,0,0">
+                <StackPanel>
+                    <ui:TextBlock x:Name="StrokesText" FontFamily="Consolas" TextWrapping="Wrap" Text="Nenhuma arrastada ainda." />
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <ui:TextBlock Text="DPI medido" Appearance="Secondary" />
+                        <ui:TextBlock x:Name="DpiValue" Grid.Column="1" FontTypography="BodyStrong" Text="—" />
+                        <ui:TextBlock Grid.Row="1" Text="Polling rate" Appearance="Secondary" Margin="0,8,0,0" />
+                        <ui:TextBlock x:Name="PollingValue" Grid.Row="1" Grid.Column="1" FontTypography="BodyStrong" Text="—" Margin="0,8,0,0" />
+                    </Grid>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,8,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon x:Name="VerdictIcon" FontSize="36" Filled="True" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <ui:TextBlock x:Name="VerdictText" FontTypography="BodyStrong" TextWrapping="Wrap" />
+                        <ui:TextBlock x:Name="VerdictSubtext" Appearance="Secondary" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+            </ui:Card>
+
+            <ui:Button Content="Recomeçar" Icon="{ui:SymbolIcon ArrowReset24}" HorizontalAlignment="Right"
+                       Margin="0,12,0,0" Click="ResetButton_Click" />
+        </StackPanel>
+    </DockPanel>
+</ui:FluentWindow>
