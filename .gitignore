@@ -488,3 +488,6 @@ $RECYCLE.BIN/
 
 # Published executables (dotnet publish ... -o publish)
 publish/
+
+# Installer build output (ISCC installer\MouseFix.iss)
+installer/Output/

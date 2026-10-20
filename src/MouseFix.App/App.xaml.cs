@@ -7,10 +7,12 @@ namespace MouseFix.App;
 public partial class App : Application
 {
     private const string InstanceName = "MouseFix.SingleInstance";
+    private const string ExitArgument = "--exit";
     private static readonly TimeSpan NotifyCooldown = TimeSpan.FromMinutes(5);
 
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
+    private EventWaitHandle? _exitEvent;
     private MouseFixService _service = null!;
     private MainWindow _window = null!;
     private TrayIcon? _tray;
@@ -22,6 +24,26 @@ public partial class App : Application
         base.OnStartup(e);
 
         _instanceMutex = new Mutex(initiallyOwned: true, InstanceName, out bool isFirstInstance);
+
+        if (e.Args.Contains(ExitArgument))
+        {
+            // Used by the uninstaller: ask the running copy to close and wait for it, so its files can be removed.
+            if (!isFirstInstance && EventWaitHandle.TryOpenExisting(InstanceName + ".Exit", out var exitEvent))
+            {
+                exitEvent.Set();
+                try
+                {
+                    _instanceMutex.WaitOne(TimeSpan.FromSeconds(10));
+                }
+                catch (AbandonedMutexException)
+                {
+                    // The other copy ended without releasing the mutex; it is gone either way.
+                }
+            }
+            Shutdown();
+            return;
+        }
+
         if (!isFirstInstance)
         {
             // Already running (e.g. started with Windows): ask that instance to show itself.
@@ -36,6 +58,9 @@ public partial class App : Application
         _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, InstanceName + ".Show");
         ThreadPool.RegisterWaitForSingleObject(_showEvent, (_, _) => Dispatcher.BeginInvoke(ShowMainWindow),
             null, Timeout.Infinite, executeOnlyOnce: false);
+        _exitEvent = new EventWaitHandle(false, EventResetMode.AutoReset, InstanceName + ".Exit");
+        ThreadPool.RegisterWaitForSingleObject(_exitEvent, (_, _) => Dispatcher.BeginInvoke(ExitApp),
+            null, Timeout.Infinite, executeOnlyOnce: true);
 
         var settings = AppSettings.Load(AppSettings.DefaultPath);
         _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath));
@@ -56,7 +81,14 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _tray?.Dispose();
-        _instanceMutex?.ReleaseMutex();
+        try
+        {
+            _instanceMutex?.ReleaseMutex();
+        }
+        catch (ApplicationException)
+        {
+            // Not owned (an --exit run that timed out waiting); nothing to release.
+        }
         _instanceMutex?.Dispose();
         base.OnExit(e);
     }
@@ -107,6 +139,15 @@ public partial class App : Application
             return;
         _toldAboutTray = true;
         _tray?.Notify("MouseFix continua ativo", "Ele fica na bandeja protegendo sua configuração. Use \"Sair\" no menu para fechar.");
+    }
+
+    // Raised on Windows shutdown/logoff and when an installer or uninstaller asks the app to close
+    // (Restart Manager). The window normally hides to the tray on close; here it must really exit.
+    private void App_SessionEnding(object sender, SessionEndingCancelEventArgs e)
+    {
+        if (_window is not null)
+            _window.AllowClose = true;
+        Shutdown();
     }
 
     // Without this, an error while opening the window closes the app with no message.

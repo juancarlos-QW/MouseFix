@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              ShutdownMode="OnExplicitShutdown"
-             DispatcherUnhandledException="App_DispatcherUnhandledException">
+             DispatcherUnhandledException="App_DispatcherUnhandledException"
+             SessionEnding="App_SessionEnding">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

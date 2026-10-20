@@ -8,7 +8,12 @@ Grátis e de código aberto. Não precisa de administrador nem de instalar nada.
 
 ## Download
 
-Baixe o `MouseFix.exe` na página de **[Releases](../../releases/latest)** e abra. Funciona no Windows 10 e 11 (64 bits).
+Na página de **[Releases](../../releases/latest)**, baixe um dos dois:
+
+- **`MouseFix-Setup-x.y.z.exe` (recomendado):** instalador. Cria o atalho na **área de trabalho** e no Menu Iniciar, e aparece em "Adicionar ou remover programas" para desinstalar. Não pede administrador.
+- **`MouseFix.exe`:** versão portátil, sem instalar. É só abrir.
+
+Funciona no Windows 10 e 11 (64 bits).
 
 > **O Windows pode mostrar "O Windows protegeu o computador".** Isso acontece porque o app é novo e não tem assinatura digital (que é paga). Clique em **Mais informações → Executar assim mesmo**. Se preferir, confira o código SHA-256 do arquivo (está na página do release) ou compile você mesmo a partir deste código.
 
@@ -50,7 +55,7 @@ Não. A velocidade multiplica todo movimento pelo mesmo valor. Aceleração é q
 Sua velocidade do Windows provavelmente era menor que 10. Faça o **Teste do emulador**. Se ele confirmar que a mira segue o cursor do Windows, clique em **Aplicar sensibilidade**: a mira volta à sensação de antes e fica mais precisa.
 
 **Como desfaço tudo?**
-Clique em **Restaurar** (volta suas configurações originais) e depois em **Sair** no ícone da bandeja. Para o emulador, o arquivo original fica salvo ao lado do original com a extensão `.mousefix.bak`.
+Clique em **Restaurar** (volta suas configurações originais) e depois em **Sair** no ícone da bandeja. Se instalou com o instalador, desinstale em **Configurações → Aplicativos**. Para o emulador, o arquivo original fica salvo ao lado do original com a extensão `.mousefix.bak`.
 
 **O MouseFix coleta algum dado?**
 Não. Ele não acessa a internet. Tudo fica no seu PC, em `%AppData%\MouseFix` (backup, configurações e log).
@@ -69,6 +74,14 @@ Gerar o `.exe` único (não precisa de .NET no PC de quem usar):
 ```
 dotnet publish src/MouseFix.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o publish
 ```
+
+Gerar o instalador (requer o [Inno Setup 6](https://jrsoftware.org/isinfo.php); rode depois do comando acima):
+
+```
+ISCC.exe installer\MouseFix.iss
+```
+
+O instalador sai em `installer\Output\`.
 
 Estrutura:
 - `src/MouseFix.Core`: lógica (configurações do Windows, backup, curvas, analisadores dos testes, arquivos do emulador).
