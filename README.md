@@ -1,0 +1,82 @@
+# MouseFix
+
+Remove a aceleração do mouse no Windows com um clique, mantém ela desligada e mostra, com testes, se o seu mouse está realmente 1:1. Também verifica a mira do **Free Fire** no **MSI App Player / BlueStacks 5**.
+
+Grátis e de código aberto. Não precisa de administrador nem de instalar nada.
+
+![Tela do MouseFix](docs/screenshot.png)
+
+## Download
+
+Baixe o `MouseFix.exe` na página de **[Releases](../../releases/latest)** e abra. Funciona no Windows 10 e 11 (64 bits).
+
+> **O Windows pode mostrar "O Windows protegeu o computador".** Isso acontece porque o app é novo e não tem assinatura digital (que é paga). Clique em **Mais informações → Executar assim mesmo**. Se preferir, confira o código SHA-256 do arquivo (está na página do release) ou compile você mesmo a partir deste código.
+
+## O que ele faz
+
+**No Windows**
+- Desliga **"Aumentar precisão do ponteiro"** (a aceleração do Windows).
+- Coloca a velocidade do ponteiro em **10/20**, o único valor 1:1 exato (1 ponto do sensor = 1 pixel).
+- Grava curvas lineares de proteção (o conhecido "MarkC fix"), para jogos antigos que religam a aceleração sozinhos.
+- **Guarda suas configurações originais** e volta tudo com o botão **Restaurar**.
+
+**Em segundo plano (na bandeja)**
+- **Proteção automática:** se algum programa religar a aceleração, o MouseFix desliga de novo em menos de 1 segundo.
+- Opção de **iniciar com o Windows**.
+- Avisa se um software de mouse (Razer Synapse, Logitech G HUB, Corsair iCUE...) está aberto, porque eles podem aplicar aceleração no driver.
+
+**Testes (menu "Testes")**
+- **Precisão do Windows:** lê o sensor direto (Raw Input) e compara com o cursor em várias velocidades. Mostra "1:1 confirmado" ou "aceleração detectada".
+- **Distância:** você arrasta o mouse a mesma distância devagar e rápido. Mostra se o mouse ou o driver dele aplica aceleração, o **DPI real** e o **polling rate**.
+
+**Emulador (MSI App Player / BlueStacks 5 com Free Fire ou Free Fire MAX)**
+- Mostra se a aceleração do emulador está ligada e desliga, se precisar (com backup).
+- **Teste do emulador:** descobre se a mira do jogo segue o cursor do Windows ou lê o sensor direto.
+- Se a velocidade do Windows mudou, sugere e aplica a sensibilidade certa para a mira continuar com a mesma sensação.
+
+## O que ele NÃO faz (seja realista)
+
+- **Não é hack nem aim assist.** Não mexe no jogo, não injeta nada, não lê memória. Só altera configurações do Windows e o arquivo de controles do emulador, que você mesmo poderia alterar.
+- **Jogos de PC que usam Raw Input** (Valorant, CS2 e a maioria dos FPS atuais) já ignoram a aceleração do Windows. Neles o MouseFix não muda nada.
+- **Não remove o comportamento próprio do jogo.** O Free Fire foi feito para toque e tem assistência de mira; o emulador converte o mouse em "dedo arrastando". Isso nenhum app de PC muda.
+- Aceleração aplicada **dentro do mouse ou do driver** não é removida pelo MouseFix. O teste de distância mostra se ela existe; aí desligue no software do fabricante.
+
+## Perguntas frequentes
+
+**Mudar a velocidade do ponteiro cria aceleração?**
+Não. A velocidade multiplica todo movimento pelo mesmo valor. Aceleração é quando o multiplicador muda conforme a rapidez da mão. Mas só 10/20 é 1:1 exato: abaixo disso o cursor precisa de mais de um ponto para andar 1 pixel, acima disso ele pula pixels.
+
+**Minha mira no emulador ficou mais rápida depois do MouseFix.**
+Sua velocidade do Windows provavelmente era menor que 10. Faça o **Teste do emulador**. Se ele confirmar que a mira segue o cursor do Windows, clique em **Aplicar sensibilidade**: a mira volta à sensação de antes e fica mais precisa.
+
+**Como desfaço tudo?**
+Clique em **Restaurar** (volta suas configurações originais) e depois em **Sair** no ícone da bandeja. Para o emulador, o arquivo original fica salvo ao lado do original com a extensão `.mousefix.bak`.
+
+**O MouseFix coleta algum dado?**
+Não. Ele não acessa a internet. Tudo fica no seu PC, em `%AppData%\MouseFix` (backup, configurações e log).
+
+## Compilar a partir do código
+
+Requer o [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+
+```
+dotnet test
+dotnet run --project src/MouseFix.App
+```
+
+Gerar o `.exe` único (não precisa de .NET no PC de quem usar):
+
+```
+dotnet publish src/MouseFix.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o publish
+```
+
+Estrutura:
+- `src/MouseFix.Core`: lógica (configurações do Windows, backup, curvas, analisadores dos testes, arquivos do emulador).
+- `src/MouseFix.App`: interface WPF, bandeja, monitor de proteção e janelas de teste.
+- `tests/MouseFix.Core.Tests`: testes automáticos.
+
+## Licença
+
+[MIT](LICENSE). Pode usar, modificar e distribuir, mantendo o aviso de copyright.
+
+MouseFix não tem relação com Garena, MSI, BlueStacks, Razer, Logitech ou outras marcas citadas; os nomes aparecem só para indicar compatibilidade.

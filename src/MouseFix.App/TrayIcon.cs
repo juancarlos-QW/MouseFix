@@ -22,7 +22,7 @@ internal sealed class TrayIcon : IDisposable
         _icon = new Forms.NotifyIcon
         {
             Icon = new Drawing.Icon(stream, Forms.SystemInformation.SmallIconSize),
-            Text = "MouseFix",
+            Text = $"MouseFix {typeof(TrayIcon).Assembly.GetName().Version?.ToString(3)}",
             ContextMenuStrip = menu,
             Visible = true,
         };
