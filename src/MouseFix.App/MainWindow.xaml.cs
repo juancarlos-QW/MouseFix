@@ -31,9 +31,38 @@ public partial class MainWindow : FluentWindow
         // The slider is the default speed; a running program's profile may be in effect instead.
         SpeedSlider.Value = settings.PointerSpeed;
         VersionText.Text = $"Versão {CurrentVersion.ToString(3)}";
+        AboutText.Text = $"MouseFix {CurrentVersion.ToString(3)}";
         _initializing = false;
+        ShowPage("Home");
         Refresh();
     }
+
+    private void ShowPage(string page)
+    {
+        var pages = new Dictionary<string, (UIElement Page, Wpf.Ui.Controls.Button Nav)>
+        {
+            ["Home"] = (PageHome, NavHome),
+            ["Profiles"] = (PageProfiles, NavProfiles),
+            ["Emulator"] = (PageEmulator, NavEmulator),
+            ["Tests"] = (PageTests, NavTests),
+            ["Settings"] = (PageSettings, NavSettings),
+        };
+        foreach (var (name, (element, nav)) in pages)
+        {
+            bool selected = name == page;
+            element.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+            nav.Appearance = selected ? ControlAppearance.Secondary : ControlAppearance.Transparent;
+        }
+    }
+
+    private void NavButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string page })
+            ShowPage(page);
+    }
+
+    private void GitHubButton_Click(object sender, RoutedEventArgs e) =>
+        Run(() => ProblemReporter.OpenInBrowser("https://github.com/juancarlos-QW/MouseFix"));
 
     private static Version CurrentVersion => typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0);
 
@@ -45,6 +74,7 @@ public partial class MainWindow : FluentWindow
     {
         var area = SystemParameters.WorkArea;
         Height = Math.Min(Height, area.Height - 16);
+        Width = Math.Min(Width, area.Width - 16);
         Left = area.Left + (area.Width - Width) / 2;
         Top = area.Top + (area.Height - Height) / 2;
     }
@@ -151,9 +181,10 @@ public partial class MainWindow : FluentWindow
     private void RefreshProfiles()
     {
         ProfilesList.Children.Clear();
-        ProfilesHint.Text = _settings.Profiles.Count == 0
-            ? "Troque a velocidade sozinho quando um programa abrir (ex.: o emulador) e volte ao padrão quando ele fechar."
-            : "O primeiro programa aberto da lista define a velocidade. A aceleração fica sempre desligada.";
+        ProfilesEmpty.Visibility = _settings.Profiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesHint.Text = "Quando um programa da lista abrir (ex.: o emulador), o MouseFix troca a velocidade sozinho e volta " +
+                            $"à velocidade padrão, {SpeedLabel(_settings.PointerSpeed)}, quando ele fechar. Se vários estiverem abertos, vale o primeiro " +
+                            "da lista. A aceleração fica sempre desligada.";
 
         foreach (var profile in _settings.Profiles)
         {
@@ -257,6 +288,7 @@ public partial class MainWindow : FluentWindow
         _emulatorProfile = profile;
 
         EmulatorCard.Visibility = profile?.SelectedAim is null ? Visibility.Collapsed : Visibility.Visible;
+        EmulatorEmpty.Visibility = profile?.SelectedAim is null ? Visibility.Visible : Visibility.Collapsed;
         if (profile?.SelectedAim is not { } aim)
             return;
 
