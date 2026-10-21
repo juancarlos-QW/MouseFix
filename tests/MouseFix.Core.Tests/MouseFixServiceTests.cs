@@ -16,9 +16,9 @@ public sealed class MouseFixServiceTests : IDisposable
     public void Dispose() => File.Delete(_backupPath);
 
     [Fact]
-    public void RemoveAcceleration_applies_one_to_one()
+    public void ApplyTarget_by_default_applies_one_to_one()
     {
-        _service.RemoveAcceleration();
+        _service.ApplyTarget();
 
         Assert.True(_store.Settings.IsOneToOne);
         Assert.Equal(SmoothMouseCurve.LinearX(125), _store.Settings.SmoothMouseXCurve);
@@ -28,7 +28,7 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void Restore_brings_back_original_settings()
     {
-        _service.RemoveAcceleration();
+        _service.ApplyTarget();
         _service.Restore();
 
         Assert.Equal(Accelerated, _store.Settings);
@@ -38,8 +38,8 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void Applying_twice_keeps_the_original_backup()
     {
-        _service.RemoveAcceleration();
-        _service.RemoveAcceleration();
+        _service.ApplyTarget();
+        _service.ApplyTarget();
         _service.Restore();
 
         Assert.Equal(Accelerated, _store.Settings);
@@ -55,7 +55,7 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void EnsureFixed_reapplies_when_another_program_turns_acceleration_back_on()
     {
-        _service.RemoveAcceleration();
+        _service.ApplyTarget();
         _store.Settings = _store.Settings with { Acceleration = 1 };
 
         Assert.True(_service.EnsureFixed());
@@ -65,7 +65,7 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void EnsureFixed_returns_false_when_already_fixed()
     {
-        _service.RemoveAcceleration();
+        _service.ApplyTarget();
 
         Assert.False(_service.EnsureFixed());
     }
@@ -73,7 +73,7 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void Reapplying_does_not_overwrite_the_original_backup()
     {
-        _service.RemoveAcceleration();
+        _service.ApplyTarget();
         _store.Settings = _store.Settings with { Speed = 3 };
         _service.EnsureFixed();
         _service.Restore();
@@ -84,8 +84,8 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void Chosen_speed_is_applied_with_acceleration_off()
     {
-        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => 6);
-        service.RemoveAcceleration();
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(6));
+        service.ApplyTarget();
 
         Assert.Equal(6, _store.Settings.Speed);
         Assert.False(_store.Settings.IsAccelerationEnabled);
@@ -96,8 +96,8 @@ public sealed class MouseFixServiceTests : IDisposable
     [Fact]
     public void Protection_keeps_the_chosen_speed_instead_of_forcing_10()
     {
-        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => 6);
-        service.RemoveAcceleration();
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(6));
+        service.ApplyTarget();
 
         Assert.False(service.EnsureFixed());
 
@@ -111,12 +111,63 @@ public sealed class MouseFixServiceTests : IDisposable
     public void Changing_the_chosen_speed_takes_effect_on_the_next_check()
     {
         int speed = 10;
-        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => speed);
-        service.RemoveAcceleration();
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(speed));
+        service.ApplyTarget();
 
         speed = 14;
         Assert.True(service.EnsureFixed());
         Assert.Equal(14, _store.Settings.Speed);
+    }
+
+    [Fact]
+    public void Acceleration_turned_on_by_the_user_uses_windows_defaults_and_is_kept()
+    {
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(10, AccelerationEnabled: true));
+        service.ApplyTarget();
+
+        Assert.True(_store.Settings.IsAccelerationEnabled);
+        Assert.Equal((6, 10), (_store.Settings.Threshold1, _store.Settings.Threshold2));
+        // Linear curves would cancel the acceleration, so Windows' own curves are used.
+        Assert.Equal(SmoothMouseCurve.WindowsDefaultX, _store.Settings.SmoothMouseXCurve);
+
+        _store.Settings = _store.Settings with { Acceleration = 0 };
+        Assert.True(service.EnsureFixed());
+        Assert.True(_store.Settings.IsAccelerationEnabled);
+    }
+
+    [Fact]
+    public void Scroll_lines_are_left_alone_until_the_user_chooses_them()
+    {
+        _store.Settings = _store.Settings with { ScrollLines = 5 };
+        _service.ApplyTarget();
+        Assert.Equal(5, _store.Settings.ScrollLines);
+
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(ScrollLines: 3));
+        Assert.True(service.EnsureFixed());
+        Assert.Equal(3, _store.Settings.ScrollLines);
+    }
+
+    [Fact]
+    public void Scroll_lines_are_kept_within_limits()
+    {
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(ScrollLines: 500));
+
+        Assert.Equal(TargetOptions.MaxScrollLines, service.BuildTarget().ScrollLines);
+    }
+
+    [Fact]
+    public void Old_backups_without_scroll_lines_do_not_change_scrolling_on_restore()
+    {
+        File.WriteAllText(_backupPath, """
+            { "Acceleration": 1, "Threshold1": 6, "Threshold2": 10, "Speed": 6,
+              "SmoothMouseXCurve": "AAAAAAAAAAAVbgAAAAAAAABAAQAAAAAAKdwDAAAAAAAAACgAAAAAAA==",
+              "SmoothMouseYCurve": "AAAAAAAAAAD9EQEAAAAAAAAkBAAAAAAAAPwSAAAAAAAAwLsBAAAAAA==" }
+            """);
+        _store.Settings = _store.Settings with { ScrollLines = 7 };
+        _service.Restore();
+
+        Assert.Equal(6, _store.Settings.Speed);
+        Assert.Null(_store.Settings.ScrollLines);
     }
 
     [Theory]

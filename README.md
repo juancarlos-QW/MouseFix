@@ -23,6 +23,8 @@ Funciona no Windows 10 e 11 (64 bits).
 - Desliga **"Aumentar precisão do ponteiro"** (a aceleração do Windows).
 - Coloca a velocidade do ponteiro em **10/20**, o único valor 1:1 exato (1 ponto do sensor = 1 pixel).
 - Ou **escolha outra velocidade (1 a 20)** sem ligar a aceleração: a proteção automática mantém a velocidade que você escolheu.
+- Ajuste também a **velocidade de rolagem** (linhas por giro da roda). Se quiser mesmo a aceleração, há um interruptor para ligá-la; o MouseFix respeita a escolha.
+- As mudanças só valem quando você clica em **Aplicar configurações**.
 - Grava curvas lineares de proteção (o conhecido "MarkC fix"), para jogos antigos que religam a aceleração sozinhos.
 - **Guarda suas configurações originais** e volta tudo com o botão **Restaurar**.
 

@@ -11,6 +11,121 @@
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- MouseFix palette: deep navy surfaces with a blue accent. -->
+            <Color x:Key="MfAccentColor">#1A7CFF</Color>
+            <SolidColorBrush x:Key="MfAccent" Color="{StaticResource MfAccentColor}" />
+            <SolidColorBrush x:Key="MfWindowBackground" Color="#0A0F1A" />
+            <SolidColorBrush x:Key="MfSidebarBackground" Color="#0A0F1A" />
+            <SolidColorBrush x:Key="MfPanel" Color="#0F1724" />
+            <SolidColorBrush x:Key="MfPanelBorder" Color="#1C2738" />
+            <SolidColorBrush x:Key="MfDivider" Color="#1A2434" />
+            <SolidColorBrush x:Key="MfNavSelected" Color="#0F2A52" />
+            <SolidColorBrush x:Key="MfNavHover" Color="#121D2E" />
+            <SolidColorBrush x:Key="MfTextMuted" Color="#8A98AD" />
+            <SolidColorBrush x:Key="MfGridLine" Color="#16202F" />
+            <SolidColorBrush x:Key="MfSuccess" Color="#3DD68C" />
+            <SolidColorBrush x:Key="MfWarning" Color="#F5B83D" />
+            <SolidColorBrush x:Key="MfDanger" Color="#FF5C6C" />
+
+            <!-- WPF-UI's own brushes, re-tinted so its cards and windows match the palette. -->
+            <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="#0A0F1A" />
+            <SolidColorBrush x:Key="CardBackground" Color="#0F1724" />
+            <SolidColorBrush x:Key="CardBackgroundPointerOver" Color="#132036" />
+            <SolidColorBrush x:Key="CardBackgroundPressed" Color="#0D1522" />
+            <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#0F1724" />
+            <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#121B2A" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#1C2738" />
+            <SolidColorBrush x:Key="CardBorderBrushPressed" Color="#1C2738" />
+
+            <!-- Rounded navy panel used for every section. -->
+            <Style x:Key="MfPanelStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource MfPanel}" />
+                <Setter Property="BorderBrush" Value="{StaticResource MfPanelBorder}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="24" />
+            </Style>
+
+            <!-- Slider with a blue filled track up to the value, a glowing round thumb and tick marks. -->
+            <Style x:Key="MfSliderFill" TargetType="RepeatButton">
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RepeatButton">
+                            <Border Height="6" CornerRadius="3" Margin="11,0,0,0" Background="{StaticResource MfAccent}" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="MfSliderEmpty" TargetType="RepeatButton">
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RepeatButton">
+                            <Border Background="Transparent" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="MfSliderThumb" TargetType="Thumb">
+                <Setter Property="Width" Value="22" />
+                <Setter Property="Height" Value="22" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <Ellipse x:Name="Dot" Fill="{StaticResource MfAccent}">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect Color="{StaticResource MfAccentColor}" BlurRadius="14" ShadowDepth="0" Opacity="0.7" />
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Dot" Property="Fill" Value="#4C98FF" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="MfSlider" TargetType="Slider">
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Height="6" CornerRadius="3" Margin="11,0" Background="#253043" VerticalAlignment="Center" />
+                                <Track x:Name="PART_Track" Height="28">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource MfSliderFill}" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource MfSliderEmpty}" />
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource MfSliderThumb}" />
+                                    </Track.Thumb>
+                                </Track>
+                                <TickBar Grid.Row="1" Placement="Bottom" Height="6" Margin="11,8,11,0" Fill="#3A475B"
+                                         Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                                         TickFrequency="{TemplateBinding TickFrequency}" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="MfDividerStyle" TargetType="Border">
+                <Setter Property="Height" Value="1" />
+                <Setter Property="Background" Value="{StaticResource MfDivider}" />
+                <Setter Property="Margin" Value="0,20" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

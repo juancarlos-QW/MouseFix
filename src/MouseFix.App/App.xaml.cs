@@ -1,8 +1,13 @@
-﻿using System.IO;
+using System.IO;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 using MouseFix.Core;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Controls;
+using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
 
 namespace MouseFix.App;
 
@@ -67,11 +72,15 @@ public partial class App : Application
         ThreadPool.RegisterWaitForSingleObject(_exitEvent, (_, _) => Dispatcher.BeginInvoke(ExitApp),
             null, Timeout.Infinite, executeOnlyOnce: true);
 
+        // Always the navy dark look with the blue accent, whatever the Windows theme or accent colour is.
+        ApplicationThemeManager.Apply(ApplicationTheme.Dark, WindowBackdropType.None, updateAccent: false);
+        ApplicationAccentColorManager.Apply((Color)Resources["MfAccentColor"], ApplicationTheme.Dark);
+
         var settings = _settings = AppSettings.Load(AppSettings.DefaultPath);
         ProtectionMonitor? monitor = null;
         // The speed in effect: the running program's profile, otherwise the default chosen in the window.
         _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath),
-            () => monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed);
+            () => new TargetOptions(monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed, settings.AccelerationEnabled, settings.ScrollLines));
         _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles);
         monitor.Reapplied += OnReapplied;
         monitor.ProfileChanged += OnProfileChanged;
@@ -166,8 +175,9 @@ public partial class App : Application
     {
         try
         {
-            _service.RemoveAcceleration();
-            _tray?.Notify("Aceleração removida", $"Velocidade {_service.TargetSpeed}/20, sem aceleração.");
+            _service.ApplyTarget();
+            _tray?.Notify("Configurações aplicadas",
+                $"Velocidade {_service.TargetSpeed}/20, aceleração {(_service.Options.AccelerationEnabled ? "ligada" : "desligada")}.");
         }
         catch (Exception ex)
         {

@@ -17,6 +17,8 @@ public sealed partial class WindowsMouseSettingsStore : IMouseSettingsStore
     private const uint SPI_GETMOUSESPEED = 0x0070;
     private const uint SPI_SETMOUSESPEED = 0x0071;
     private const uint SPIF_UPDATEINIFILE = 0x01;
+    private const uint SPI_GETWHEELSCROLLLINES = 0x0068;
+    private const uint SPI_SETWHEELSCROLLLINES = 0x0069;
     private const nint HWND_BROADCAST = 0xFFFF;
     private const uint WM_SETTINGCHANGE = 0x001A;
 
@@ -29,11 +31,14 @@ public sealed partial class WindowsMouseSettingsStore : IMouseSettingsStore
         if (!SystemParametersInfo(SPI_GETMOUSESPEED, 0, out int speed, 0))
             throw new Win32Exception(Marshal.GetLastWin32Error());
 
+        if (!SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, out int scrollLines, 0))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+
         using var key = Registry.CurrentUser.OpenSubKey(MouseKeyPath);
         var x = key?.GetValue("SmoothMouseXCurve") as byte[] ?? SmoothMouseCurve.WindowsDefaultX;
         var y = key?.GetValue("SmoothMouseYCurve") as byte[] ?? SmoothMouseCurve.WindowsDefaultY;
 
-        return new MouseSettings(mouse[2], mouse[0], mouse[1], speed, x, y);
+        return new MouseSettings(mouse[2], mouse[0], mouse[1], speed, x, y, scrollLines);
     }
 
     public void Write(MouseSettings settings)
@@ -53,6 +58,14 @@ public sealed partial class WindowsMouseSettingsStore : IMouseSettingsStore
 
         if (!SystemParametersInfo(SPI_SETMOUSESPEED, 0, settings.Speed, SPIF_UPDATEINIFILE))
             throw new Win32Exception(Marshal.GetLastWin32Error());
+
+        // Unknown (e.g. a backup made before MouseFix managed scrolling): leave the current value alone.
+        if (settings.ScrollLines is int lines)
+        {
+            if (!SystemParametersInfo(SPI_SETWHEELSCROLLLINES, (uint)lines, 0, SPIF_UPDATEINIFILE))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            SendNotifyMessage(HWND_BROADCAST, WM_SETTINGCHANGE, (nint)SPI_SETWHEELSCROLLLINES, 0);
+        }
 
         // Let other programs (e.g. the Settings app) refresh, without waiting for them.
         SendNotifyMessage(HWND_BROADCAST, WM_SETTINGCHANGE, (nint)SPI_SETMOUSE, 0);

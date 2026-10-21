@@ -11,6 +11,12 @@ public sealed class AppSettings
     /// <summary>Pointer speed to keep (1-20). Acceleration stays off at any speed; only 10 is exact 1:1.</summary>
     public int PointerSpeed { get; set; } = MouseSettings.OneToOneSpeed;
 
+    /// <summary>Off by default (the point of MouseFix); if the user turns it on, it is kept on.</summary>
+    public bool AccelerationEnabled { get; set; }
+
+    /// <summary>Lines per wheel notch, or null to leave Windows' value alone (until the user changes it here).</summary>
+    public int? ScrollLines { get; set; }
+
     /// <summary>Per-program speeds; the first running one wins, otherwise <see cref="PointerSpeed"/> is used.</summary>
     public List<SpeedProfile> Profiles { get; set; } = [];
 

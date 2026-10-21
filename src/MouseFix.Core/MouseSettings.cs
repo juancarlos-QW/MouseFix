@@ -9,13 +9,15 @@ namespace MouseFix.Core;
 /// <param name="Speed">Pointer speed slider, 1-20. Only 10 is an exact 1:1 multiplier.</param>
 /// <param name="SmoothMouseXCurve">40-byte curve used when acceleration is on.</param>
 /// <param name="SmoothMouseYCurve">40-byte curve used when acceleration is on.</param>
+/// <param name="ScrollLines">Lines per mouse-wheel notch; null when unknown (left unchanged on write).</param>
 public sealed record MouseSettings(
     int Acceleration,
     int Threshold1,
     int Threshold2,
     int Speed,
     byte[] SmoothMouseXCurve,
-    byte[] SmoothMouseYCurve)
+    byte[] SmoothMouseYCurve,
+    int? ScrollLines = null)
 {
     public const int OneToOneSpeed = 10;
 
@@ -39,6 +41,7 @@ public sealed record MouseSettings(
         Threshold1 == other.Threshold1 &&
         Threshold2 == other.Threshold2 &&
         Speed == other.Speed &&
+        ScrollLines == other.ScrollLines &&
         SmoothMouseXCurve.AsSpan().SequenceEqual(other.SmoothMouseXCurve) &&
         SmoothMouseYCurve.AsSpan().SequenceEqual(other.SmoothMouseYCurve);
 
