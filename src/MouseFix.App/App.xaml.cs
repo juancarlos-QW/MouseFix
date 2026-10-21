@@ -63,7 +63,8 @@ public partial class App : Application
             null, Timeout.Infinite, executeOnlyOnce: true);
 
         var settings = AppSettings.Load(AppSettings.DefaultPath);
-        _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath));
+        _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath),
+            () => settings.PointerSpeed);
         var monitor = new ProtectionMonitor(_service, () => settings.AutoReapply);
         monitor.Reapplied += OnReapplied;
 

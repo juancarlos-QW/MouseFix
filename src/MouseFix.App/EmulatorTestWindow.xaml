@@ -20,7 +20,7 @@
                     <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
                                   Text="2. Clique em &quot;Iniciar teste&quot; e volte para o jogo (Alt+Tab)." />
                     <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                                  Text="3. A cada 4 segundos a velocidade muda: bipe AGUDO = normal (1:1), bipe GRAVE = metade (0,5x)." />
+                                  Text="3. A cada 4 segundos a velocidade muda: bipe AGUDO = sua velocidade normal, bipe GRAVE = metade dela." />
                     <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
                                   Text="4. Repita sempre o mesmo movimento (ex.: arraste o mouse uns 5 cm para o lado) e veja quanto a mira gira." />
                     <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"

@@ -25,6 +25,10 @@ public sealed record MouseSettings(
 
     public static double SpeedMultiplier(int speed) => SpeedMultipliers[Math.Clamp(speed, 1, 20)];
 
+    /// <summary>The pointer speed whose multiplier is closest to the given one.</summary>
+    public static int SpeedForMultiplier(double multiplier) =>
+        Enumerable.Range(1, 20).MinBy(s => Math.Abs(SpeedMultipliers[s] - multiplier));
+
     public bool IsAccelerationEnabled => Acceleration != 0;
 
     public bool IsOneToOne => !IsAccelerationEnabled && Speed == OneToOneSpeed;

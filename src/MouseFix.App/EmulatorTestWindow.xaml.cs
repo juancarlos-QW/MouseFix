@@ -11,7 +11,6 @@ namespace MouseFix.App;
 /// </summary>
 public partial class EmulatorTestWindow : FluentWindow
 {
-    private const int HalfSpeed = 6; // 0.5x
     private static readonly TimeSpan SwitchInterval = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan MaxDuration = TimeSpan.FromMinutes(2);
 
@@ -87,11 +86,12 @@ public partial class EmulatorTestWindow : FluentWindow
 
     private void ApplyPhase()
     {
-        // Both phases are acceleration-free; only the speed multiplier differs.
-        var oneToOne = _service.BuildOneToOne();
-        _service.Apply(_half ? oneToOne with { Speed = HalfSpeed } : oneToOne);
+        // Both phases are acceleration-free; only the speed multiplier differs (the user's speed vs. about half of it).
+        var normal = _service.BuildTarget();
+        int halfSpeed = MouseSettings.SpeedForMultiplier(MouseSettings.SpeedMultiplier(normal.Speed) / 2);
+        _service.Apply(_half ? normal with { Speed = halfSpeed } : normal);
 
-        PhaseText.Text = _half ? "Agora: metade (0,5x)" : "Agora: normal (1:1)";
+        PhaseText.Text = _half ? "Agora: metade da velocidade" : "Agora: velocidade normal";
         PhaseSubtext.Text = _half ? "Bipe grave" : "Bipe agudo";
 
         int frequency = _half ? 440 : 1320;

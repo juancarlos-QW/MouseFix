@@ -81,6 +81,54 @@ public sealed class MouseFixServiceTests : IDisposable
         Assert.Equal(Accelerated, _store.Settings);
     }
 
+    [Fact]
+    public void Chosen_speed_is_applied_with_acceleration_off()
+    {
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => 6);
+        service.RemoveAcceleration();
+
+        Assert.Equal(6, _store.Settings.Speed);
+        Assert.False(_store.Settings.IsAccelerationEnabled);
+        Assert.Equal((0, 0), (_store.Settings.Threshold1, _store.Settings.Threshold2));
+        Assert.True(service.IsFullyFixed);
+    }
+
+    [Fact]
+    public void Protection_keeps_the_chosen_speed_instead_of_forcing_10()
+    {
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => 6);
+        service.RemoveAcceleration();
+
+        Assert.False(service.EnsureFixed());
+
+        _store.Settings = _store.Settings with { Acceleration = 1, Speed = 10 };
+        Assert.True(service.EnsureFixed());
+        Assert.Equal(6, _store.Settings.Speed);
+        Assert.False(_store.Settings.IsAccelerationEnabled);
+    }
+
+    [Fact]
+    public void Changing_the_chosen_speed_takes_effect_on_the_next_check()
+    {
+        int speed = 10;
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => speed);
+        service.RemoveAcceleration();
+
+        speed = 14;
+        Assert.True(service.EnsureFixed());
+        Assert.Equal(14, _store.Settings.Speed);
+    }
+
+    [Theory]
+    [InlineData(0.5, 6)]
+    [InlineData(1.0, 10)]
+    [InlineData(0.875, 9)]
+    [InlineData(0.44, 6)]
+    public void SpeedForMultiplier_finds_the_closest_speed(double multiplier, int expected)
+    {
+        Assert.Equal(expected, MouseSettings.SpeedForMultiplier(multiplier));
+    }
+
     private sealed class FakeStore : IMouseSettingsStore
     {
         public required MouseSettings Settings { get; set; }

@@ -12,6 +12,8 @@ public partial class MainWindow : FluentWindow
     private readonly AppSettings _settings;
     private readonly ProtectionMonitor _monitor;
     private EmulatorGameProfile? _emulatorProfile;
+    // The slider raises ValueChanged while XAML loads and when its value is set from code; ignore those.
+    private bool _initializing = true;
 
     public MainWindow(MouseFixService service, AppSettings settings, ProtectionMonitor monitor)
     {
@@ -21,10 +23,22 @@ public partial class MainWindow : FluentWindow
 
         InitializeComponent();
         SystemThemeWatcher.Watch(this);
+        FitToWorkArea();
 
         AutoReapplyToggle.IsChecked = settings.AutoReapply;
         AutoStartToggle.IsChecked = AutoStart.IsEnabled;
+        SpeedSlider.Value = service.TargetSpeed;
+        _initializing = false;
         Refresh();
+    }
+
+    // Never taller than the screen minus the taskbar, and centred in that area.
+    private void FitToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        Height = Math.Min(Height, area.Height - 16);
+        Left = area.Left + (area.Width - Width) / 2;
+        Top = area.Top + (area.Height - Height) / 2;
     }
 
     /// <summary>When false, closing the window only hides it to the tray.</summary>
@@ -35,18 +49,25 @@ public partial class MainWindow : FluentWindow
     public void Refresh()
     {
         var current = _service.Current;
-        var target = _service.BuildOneToOne();
+        var target = _service.BuildTarget();
         bool curvesLinear = current.SmoothMouseXCurve.AsSpan().SequenceEqual(target.SmoothMouseXCurve)
                          && current.SmoothMouseYCurve.AsSpan().SequenceEqual(target.SmoothMouseYCurve);
+        bool speedMatches = current.Speed == target.Speed;
 
-        (SymbolRegular icon, string brush, string title, string subtitle) = (current.IsOneToOne, curvesLinear) switch
+        (SymbolRegular icon, string brush, string title, string subtitle) = (current.IsAccelerationEnabled, speedMatches, curvesLinear) switch
         {
-            (true, true) => (SymbolRegular.CheckmarkCircle24, "SystemFillColorSuccessBrush",
-                "Aceleração removida", "Movimento 1:1: o cursor segue exatamente o sensor do mouse."),
-            (true, false) => (SymbolRegular.Warning24, "SystemFillColorCautionBrush",
-                "Sem aceleração, sem proteção", "Aplique para impedir que jogos antigos religuem a aceleração."),
-            _ => (SymbolRegular.DismissCircle24, "SystemFillColorCriticalBrush",
+            (true, _, _) => (SymbolRegular.DismissCircle24, "SystemFillColorCriticalBrush",
                 "Aceleração ativa", "O Windows está alterando o movimento conforme a velocidade da mão."),
+            (false, false, _) => (SymbolRegular.Warning24, "SystemFillColorCautionBrush",
+                "Sem aceleração, outra velocidade",
+                $"O Windows está em {current.Speed}/20, mas você escolheu {target.Speed}/20. Clique em \"Remover aceleração\" para aplicar."),
+            (false, true, false) => (SymbolRegular.Warning24, "SystemFillColorCautionBrush",
+                "Sem aceleração, sem proteção", "Aplique para impedir que jogos antigos religuem a aceleração."),
+            _ when target.Speed == MouseSettings.OneToOneSpeed => (SymbolRegular.CheckmarkCircle24, "SystemFillColorSuccessBrush",
+                "Aceleração removida", "Movimento 1:1: o cursor segue exatamente o sensor do mouse."),
+            _ => (SymbolRegular.CheckmarkCircle24, "SystemFillColorSuccessBrush",
+                "Aceleração removida",
+                $"Velocidade {target.Speed}/20: todo movimento é multiplicado por {MouseSettings.SpeedMultiplier(target.Speed):0.###}x, devagar ou rápido."),
         };
 
         StatusIcon.Symbol = icon;
@@ -55,8 +76,18 @@ public partial class MainWindow : FluentWindow
         StatusSubtext.Text = subtitle;
 
         AccelValue.Text = current.IsAccelerationEnabled ? "Ligada" : "Desligada";
-        SpeedValue.Text = current.Speed == MouseSettings.OneToOneSpeed ? $"{current.Speed}/20 (1:1)" : $"{current.Speed}/20";
+        SpeedValue.Text = SpeedLabel(current.Speed);
         CurvesValue.Text = curvesLinear ? "Lineares" : "Padrão do Windows";
+
+        int chosen = target.Speed;
+        SpeedChoiceValue.Text = SpeedLabel(chosen);
+        SpeedChoiceHint.Text = chosen switch
+        {
+            MouseSettings.OneToOneSpeed => "1:1 exato: cada ponto do sensor move 1 pixel. Mudar a velocidade nunca liga a aceleração.",
+            < MouseSettings.OneToOneSpeed => "Mais lento e sem aceleração. Abaixo de 10, o cursor precisa de mais de um ponto do sensor para andar 1 pixel.",
+            _ => "Mais rápido e sem aceleração. Acima de 10, o cursor pula pixels; para ganhar rapidez sem isso, aumente o DPI do mouse.",
+        };
+        SpeedResetButton.Visibility = chosen == MouseSettings.OneToOneSpeed ? Visibility.Collapsed : Visibility.Visible;
 
         LoginInfo.IsOpen = _service.HasBackup;
         RestoreButton.IsEnabled = _service.HasBackup;
@@ -70,6 +101,31 @@ public partial class MainWindow : FluentWindow
 
         RefreshEmulator();
     }
+
+    private static string SpeedLabel(int speed) => speed == MouseSettings.OneToOneSpeed
+        ? $"{speed}/20 (1:1)"
+        : $"{speed}/20 ({MouseSettings.SpeedMultiplier(speed):0.###}x)";
+
+    private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_initializing)
+            return;
+        int speed = (int)Math.Round(e.NewValue);
+        if (speed == _settings.PointerSpeed)
+            return;
+
+        // Choosing a speed means "this speed, no acceleration": apply it right away (with backup on first use).
+        Run(() =>
+        {
+            _settings.PointerSpeed = speed;
+            _settings.Save(AppSettings.DefaultPath);
+            _service.RemoveAcceleration();
+            Log.Info($"Velocidade do ponteiro escolhida: {speed}/20");
+        });
+    }
+
+    private void SpeedResetButton_Click(object sender, RoutedEventArgs e) =>
+        SpeedSlider.Value = MouseSettings.OneToOneSpeed;
 
     private void RefreshEmulator()
     {
@@ -107,27 +163,28 @@ public partial class MainWindow : FluentWindow
                  "ajuste pela sensibilidade do emulador ou pelo DPI do mouse.",
         true => SuggestedSensitivity(aim) is double s
             ? Math.Abs(s - aim.Sensitivity) < 0.01
-                ? $"Teste feito: a mira do {game} segue o cursor do Windows. Sensibilidade já ajustada para o 1:1 " +
-                  "(mesma sensação de antes, sem perder pontos do sensor)."
+                ? $"Teste feito: a mira do {game} segue o cursor do Windows. Sensibilidade já ajustada para a " +
+                  "velocidade atual (mesma sensação de antes do MouseFix)."
                 : $"Teste feito: a mira do {game} segue o cursor do Windows. Antes do MouseFix a velocidade era " +
-                  $"{_service.Original!.Speed}/20, por isso a mira ficou mais rápida. Com sensibilidade X {s:0.00} " +
-                  "a sensação volta a ser a de antes, agora sem perder nenhum ponto do sensor."
-            : $"Teste feito: a mira do {game} segue o cursor do Windows, então o 1:1 do MouseFix chega até o jogo.",
+                  $"{_service.Original!.Speed}/20 e agora é {_service.TargetSpeed}/20, por isso a mira mudou. " +
+                  $"Com sensibilidade X {s:0.00} a sensação volta a ser a de antes."
+            : $"Teste feito: a mira do {game} segue o cursor do Windows, então as configurações do MouseFix chegam até o jogo.",
     };
 
     /// <summary>
-    /// Emulator sensitivity that keeps the old in-game feel after the pointer speed changed to 1:1.
+    /// Emulator sensitivity that keeps the in-game feel from before MouseFix, given the pointer speed now in use.
     /// Only meaningful when the emulator follows the Windows cursor. Based on the sensitivity from before
-    /// the adjustment, so applying it once doesn't keep suggesting a smaller value.
+    /// any adjustment, so applying it doesn't keep compounding, and choosing the old speed again suggests the old value.
     /// </summary>
     private double? SuggestedSensitivity(EmulatorAim aim)
     {
         var original = _service.Original;
-        if (_settings.EmulatorUsesWindowsCursor != true || original is null || original.Speed == MouseSettings.OneToOneSpeed)
+        if (_settings.EmulatorUsesWindowsCursor != true || original is null)
             return null;
 
         double baseSensitivity = _settings.EmulatorSensitivityBeforeAdjust ?? aim.Sensitivity;
-        return Math.Round(baseSensitivity * MouseSettings.SpeedMultiplier(original.Speed), 2);
+        double ratio = MouseSettings.SpeedMultiplier(original.Speed) / MouseSettings.SpeedMultiplier(_service.TargetSpeed);
+        return Math.Round(baseSensitivity * ratio, 2);
     }
 
     private void EmulatorSensButton_Click(object sender, RoutedEventArgs e) => Run(() =>

@@ -4,11 +4,14 @@ public sealed class MouseFixService
 {
     private readonly IMouseSettingsStore _store;
     private readonly BackupStore _backup;
+    private readonly Func<int> _targetSpeed;
 
-    public MouseFixService(IMouseSettingsStore store, BackupStore backup)
+    /// <param name="targetSpeed">Pointer speed the user chose (1-20). Defaults to 10, the only exact 1:1 value.</param>
+    public MouseFixService(IMouseSettingsStore store, BackupStore backup, Func<int>? targetSpeed = null)
     {
         _store = store;
         _backup = backup;
+        _targetSpeed = targetSpeed ?? (() => MouseSettings.OneToOneSpeed);
     }
 
     public MouseSettings Current => _store.Read();
@@ -18,31 +21,36 @@ public sealed class MouseFixService
     /// <summary>The user's settings from before the first fix, if a backup exists.</summary>
     public MouseSettings? Original => _backup.Load();
 
-    /// <summary>The exact settings that give raw 1:1 movement on this machine.</summary>
-    public MouseSettings BuildOneToOne() => new(
+    public int TargetSpeed => Math.Clamp(_targetSpeed(), 1, 20);
+
+    /// <summary>
+    /// Settings with no acceleration at the chosen pointer speed. At speed 10 this is raw 1:1 movement;
+    /// other speeds scale every movement by the same factor, so they never add acceleration.
+    /// </summary>
+    public MouseSettings BuildTarget() => new(
         Acceleration: 0,
         Threshold1: 0,
         Threshold2: 0,
-        Speed: MouseSettings.OneToOneSpeed,
+        Speed: TargetSpeed,
         SmoothMouseXCurve: SmoothMouseCurve.LinearX(Math.Max(100, _store.GetDisplayScalePercent())),
         SmoothMouseYCurve: SmoothMouseCurve.LinearY());
 
-    public bool IsFullyFixed => Current.Equals(BuildOneToOne());
+    public bool IsFullyFixed => Current.Equals(BuildTarget());
 
     /// <summary>Writes the given settings as-is, without touching the backup (used by tests that change speed temporarily).</summary>
     public void Apply(MouseSettings settings) => _store.Write(settings);
 
-    /// <summary>Applies 1:1 settings. The first call saves the original settings; later calls keep that backup.</summary>
+    /// <summary>Applies the target settings. The first call saves the original settings; later calls keep that backup.</summary>
     public void RemoveAcceleration()
     {
         if (!_backup.Exists)
             _backup.Save(_store.Read());
 
-        _store.Write(BuildOneToOne());
+        _store.Write(BuildTarget());
     }
 
     /// <summary>
-    /// Re-applies 1:1 if the user has applied the fix before and something changed it since.
+    /// Re-applies the target settings if the user has applied the fix before and something changed it since.
     /// Returns true when settings had to be re-applied.
     /// </summary>
     public bool EnsureFixed()
@@ -50,7 +58,7 @@ public sealed class MouseFixService
         if (!_backup.Exists)
             return false;
 
-        var target = BuildOneToOne();
+        var target = BuildTarget();
         if (_store.Read().Equals(target))
             return false;
 

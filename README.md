@@ -22,6 +22,7 @@ Funciona no Windows 10 e 11 (64 bits).
 **No Windows**
 - Desliga **"Aumentar precisão do ponteiro"** (a aceleração do Windows).
 - Coloca a velocidade do ponteiro em **10/20**, o único valor 1:1 exato (1 ponto do sensor = 1 pixel).
+- Ou **escolha outra velocidade (1 a 20)** sem ligar a aceleração: a proteção automática mantém a velocidade que você escolheu.
 - Grava curvas lineares de proteção (o conhecido "MarkC fix"), para jogos antigos que religam a aceleração sozinhos.
 - **Guarda suas configurações originais** e volta tudo com o botão **Restaurar**.
 
@@ -49,7 +50,7 @@ Funciona no Windows 10 e 11 (64 bits).
 ## Perguntas frequentes
 
 **Mudar a velocidade do ponteiro cria aceleração?**
-Não. A velocidade multiplica todo movimento pelo mesmo valor. Aceleração é quando o multiplicador muda conforme a rapidez da mão. Mas só 10/20 é 1:1 exato: abaixo disso o cursor precisa de mais de um ponto para andar 1 pixel, acima disso ele pula pixels.
+Não. A velocidade multiplica todo movimento pelo mesmo valor. Aceleração é quando o multiplicador muda conforme a rapidez da mão. Mas só 10/20 é 1:1 exato: abaixo disso o cursor precisa de mais de um ponto para andar 1 pixel, acima disso ele pula pixels. Para mudar a velocidade, use o controle **Velocidade do ponteiro** no MouseFix (se mudar nas Configurações do Windows com a proteção ligada, o MouseFix volta para a velocidade escolhida nele).
 
 **Minha mira no emulador ficou mais rápida depois do MouseFix.**
 Sua velocidade do Windows provavelmente era menor que 10. Faça o **Teste do emulador**. Se ele confirmar que a mira segue o cursor do Windows, clique em **Aplicar sensibilidade**: a mira volta à sensação de antes e fica mais precisa.

@@ -146,7 +146,7 @@ public partial class PrecisionTestWindow : FluentWindow
                 "Cada ponto lido pelo sensor move o cursor exatamente 1 pixel, em qualquer velocidade."),
             AccelerationVerdict.Scaled => (SymbolRegular.Warning24, "SystemFillColorCautionBrush",
                 $"Sem aceleração, mas o cursor anda {_analyzer.OverallRatio:0.00}x",
-                "A relação é constante (ótimo), porém não é 1:1. Use \"Remover aceleração\" para colocar a velocidade em 10/20."),
+                "A relação é constante, então não há aceleração. Não é 1:1 porque a velocidade não está em 10/20, o que é normal se você escolheu outra velocidade."),
             AccelerationVerdict.Accelerated => (SymbolRegular.DismissCircle24, "SystemFillColorCriticalBrush",
                 $"Aceleração detectada: {_analyzer.Spread:0.0}x mais rápido em movimentos rápidos",
                 "O cursor anda mais por ponto quando a mão vai rápido. Verifique o MouseFix e o software do fabricante do mouse."),

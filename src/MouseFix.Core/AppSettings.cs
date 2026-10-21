@@ -8,6 +8,9 @@ public sealed class AppSettings
     /// <summary>Re-apply 1:1 automatically when another program turns acceleration back on.</summary>
     public bool AutoReapply { get; set; } = true;
 
+    /// <summary>Pointer speed to keep (1-20). Acceleration stays off at any speed; only 10 is exact 1:1.</summary>
+    public int PointerSpeed { get; set; } = MouseSettings.OneToOneSpeed;
+
     /// <summary>
     /// Result of the emulator test: true if the emulator's aim follows the Windows cursor
     /// (so Windows pointer settings affect the game), false if it reads the sensor directly, null if not tested.
