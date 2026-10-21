@@ -23,6 +23,8 @@ public partial class MainWindow : FluentWindow
     private int _pendingSpeed;
     private bool _pendingAcceleration;
     private int _pendingScroll;
+    // Result of the last one-click action, shown in the footer until the user changes something.
+    private string? _feedback;
 
     public MainWindow(MouseFixService service, AppSettings settings, ProtectionMonitor monitor)
     {
@@ -157,6 +159,41 @@ public partial class MainWindow : FluentWindow
         LoadPendingFromSettings();
     });
 
+    private void RemoveAccelButton_Click(object sender, RoutedEventArgs e) => Run(() => RemoveAccelerationNow());
+
+    /// <summary>
+    /// One click, no "Aplicar" needed: turns acceleration off in Windows (keeping the chosen speed and scrolling)
+    /// and in the emulator's aim controls when possible. Returns a short summary of what was done.
+    /// </summary>
+    public string RemoveAccelerationNow()
+    {
+        _settings.AccelerationEnabled = false;
+        _settings.Save(AppSettings.DefaultPath);
+        _pendingAcceleration = false;
+        _initializing = true;
+        AccelToggle.IsChecked = false;
+        _initializing = false;
+        _service.ApplyTarget();
+
+        string summary = "Aceleração do Windows removida.";
+        var emulator = BlueStacksProfiles.Find(BlueStacksProfiles.DefaultRoot).FirstOrDefault(p => p.AnyAcceleration);
+        if (emulator is not null)
+        {
+            if (BlueStacksProfiles.IsEmulatorRunning)
+            {
+                summary += $" Feche o {emulator.EmulatorName} e clique de novo para desligar a aceleração dele também.";
+            }
+            else
+            {
+                BlueStacksProfiles.DisableMouseAcceleration(emulator.FilePath);
+                summary += $" A aceleração do {emulator.EmulatorName} também foi desligada.";
+            }
+        }
+        Log.Info($"Remover aceleração: {summary}");
+        _feedback = summary;
+        return summary;
+    }
+
     // ---------- Refresh ----------
 
     public void Refresh()
@@ -224,9 +261,12 @@ public partial class MainWindow : FluentWindow
         bool inSync = current.Equals(target) && _service.HasBackup;
         FixButton.IsEnabled = pending || !inSync;
 
+        if (pending)
+            _feedback = null;
         (SymbolRegular icon, string brush, string text) = (pending, inSync) switch
         {
             (true, _) => (SymbolRegular.Info24, "MfTextMuted", "Alterações ainda não aplicadas."),
+            (false, true) when _feedback is not null => (SymbolRegular.CheckmarkCircle24, "MfSuccess", _feedback),
             (false, true) when _monitor.ActiveProfile is { } p =>
                 (SymbolRegular.CheckmarkCircle24, "MfSuccess", $"Aplicado. Perfil \"{p.DisplayName}\" ativo agora ({p.Speed}/20)."),
             (false, true) => (SymbolRegular.CheckmarkCircle24, "MfSuccess", "Tudo aplicado e protegido."),

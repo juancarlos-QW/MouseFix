@@ -175,9 +175,7 @@ public partial class App : Application
     {
         try
         {
-            _service.ApplyTarget();
-            _tray?.Notify("Configurações aplicadas",
-                $"Velocidade {_service.TargetSpeed}/20, aceleração {(_service.Options.AccelerationEnabled ? "ligada" : "desligada")}.");
+            _tray?.Notify("Aceleração removida", _window.RemoveAccelerationNow());
         }
         catch (Exception ex)
         {

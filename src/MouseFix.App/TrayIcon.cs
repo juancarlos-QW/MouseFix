@@ -15,7 +15,7 @@ internal sealed class TrayIcon : IDisposable
 
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Abrir MouseFix", null, (_, _) => open());
-        menu.Items.Add("Aplicar configurações agora", null, (_, _) => fixNow());
+        menu.Items.Add("Remover aceleração agora", null, (_, _) => fixNow());
         menu.Items.Add("Reportar problema", null, (_, _) => report());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Sair", null, (_, _) => exit());
