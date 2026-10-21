@@ -28,7 +28,10 @@ Funciona no Windows 10 e 11 (64 bits).
 
 **Em segundo plano (na bandeja)**
 - **Proteção automática:** se algum programa religar a aceleração, o MouseFix desliga de novo em menos de 1 segundo.
+- **Perfis por programa:** escolha uma velocidade para um programa (ex.: o emulador). Quando ele abre, o MouseFix troca a velocidade sozinho; quando fecha, volta ao padrão. A aceleração fica sempre desligada.
 - Opção de **iniciar com o Windows**.
+- **Aviso de versão nova** (pode desligar): consulta o GitHub uma vez por dia.
+- **Reportar problema:** abre o GitHub com um relatório já preenchido (versão, Windows e log), que você revisa antes de enviar.
 - Avisa se um software de mouse (Razer Synapse, Logitech G HUB, Corsair iCUE...) está aberto, porque eles podem aplicar aceleração no driver.
 
 **Testes (menu "Testes")**
@@ -59,7 +62,7 @@ Sua velocidade do Windows provavelmente era menor que 10. Faça o **Teste do emu
 Clique em **Restaurar** (volta suas configurações originais) e depois em **Sair** no ícone da bandeja. Se instalou com o instalador, desinstale em **Configurações → Aplicativos**. Para o emulador, o arquivo original fica salvo ao lado do original com a extensão `.mousefix.bak`.
 
 **O MouseFix coleta algum dado?**
-Não. Ele não acessa a internet. Tudo fica no seu PC, em `%AppData%\MouseFix` (backup, configurações e log).
+Não. O único acesso à internet é a verificação de versão nova: uma vez por dia ele pergunta ao GitHub qual é a última versão (`api.github.com`), sem enviar nenhum dado seu. Você pode desligar em **"Avisar quando sair versão nova"**. O botão **Reportar problema** só abre a página do GitHub no navegador; nada é enviado até você mesmo clicar em enviar lá, e o nome da sua pasta de usuário é trocado por `%USERPROFILE%`. Todo o resto fica no seu PC, em `%AppData%\MouseFix` (backup, configurações e log).
 
 ## Compilar a partir do código
 

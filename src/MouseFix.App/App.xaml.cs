@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Net.Http;
+using System.Windows;
 using System.Windows.Threading;
 using MouseFix.Core;
 
@@ -14,7 +16,10 @@ public partial class App : Application
     private EventWaitHandle? _showEvent;
     private EventWaitHandle? _exitEvent;
     private MouseFixService _service = null!;
+    private ProtectionMonitor _monitor = null!;
+    private AppSettings _settings = null!;
     private MainWindow _window = null!;
+    private readonly DispatcherTimer _updateTimer = new() { Interval = TimeSpan.FromSeconds(20) };
     private TrayIcon? _tray;
     private DateTime _lastReapplyNotice = DateTime.MinValue;
     private bool _toldAboutTray;
@@ -62,21 +67,75 @@ public partial class App : Application
         ThreadPool.RegisterWaitForSingleObject(_exitEvent, (_, _) => Dispatcher.BeginInvoke(ExitApp),
             null, Timeout.Infinite, executeOnlyOnce: true);
 
-        var settings = AppSettings.Load(AppSettings.DefaultPath);
+        var settings = _settings = AppSettings.Load(AppSettings.DefaultPath);
+        ProtectionMonitor? monitor = null;
+        // The speed in effect: the running program's profile, otherwise the default chosen in the window.
         _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath),
-            () => settings.PointerSpeed);
-        var monitor = new ProtectionMonitor(_service, () => settings.AutoReapply);
+            () => monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed);
+        _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles);
         monitor.Reapplied += OnReapplied;
+        monitor.ProfileChanged += OnProfileChanged;
 
         _window = new MainWindow(_service, settings, monitor);
         _window.HiddenToTray += OnHiddenToTray;
+        _window.CheckForUpdatesRequested += (_, _) => CheckForUpdates(force: true);
 
-        _tray = new TrayIcon(open: ShowMainWindow, fixNow: FixNow, exit: ExitApp);
+        _tray = new TrayIcon(open: ShowMainWindow, fixNow: FixNow, report: () => ProblemReporter.Open(_service, monitor), exit: ExitApp);
 
         monitor.Start(_window);
 
+        // First check shortly after start (not during it), then see every hour whether a day has passed.
+        _updateTimer.Tick += (_, _) =>
+        {
+            _updateTimer.Interval = TimeSpan.FromHours(1);
+            CheckForUpdates(force: false);
+        };
+        _updateTimer.Start();
+
         if (!e.Args.Contains(AutoStart.MinimizedArgument))
             ShowMainWindow();
+    }
+
+    private async void CheckForUpdates(bool force)
+    {
+        if (!_settings.CheckForUpdates)
+            return;
+        if (!force && _settings.LastUpdateCheck is DateTime last && DateTime.Now - last < UpdateChecker.Interval)
+            return;
+
+        try
+        {
+            var current = typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0);
+            var update = await UpdateChecker.CheckAsync(current);
+            _settings.LastUpdateCheck = DateTime.Now;
+            if (update is not null)
+            {
+                string version = update.Version.ToString(3);
+                _settings.AvailableUpdateVersion = version;
+                _settings.AvailableUpdateUrl = update.Url;
+                Log.Info($"Nova versão disponível: {version}");
+                if (_settings.NotifiedUpdateVersion != version)
+                {
+                    _settings.NotifiedUpdateVersion = version;
+                    _tray?.Notify($"MouseFix {version} disponível", "Abra o MouseFix e clique em \"Baixar\" para atualizar.");
+                }
+            }
+            _settings.Save(AppSettings.DefaultPath);
+            _window.Refresh();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        {
+            // Offline or GitHub unreachable: try again on the next hourly tick.
+            Log.Info($"Não foi possível verificar atualizações: {ex.Message}");
+        }
+    }
+
+    private void OnProfileChanged(object? sender, EventArgs e)
+    {
+        _window.Refresh();
+        _tray?.Notify("Velocidade do ponteiro", _monitor.ActiveProfile is { } p
+            ? $"{p.DisplayName} aberto: velocidade {p.Speed}/20, sem aceleração."
+            : $"Velocidade padrão: {_service.TargetSpeed}/20, sem aceleração.");
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -108,7 +167,7 @@ public partial class App : Application
         try
         {
             _service.RemoveAcceleration();
-            _tray?.Notify("Aceleração removida", "O mouse agora está em 1:1.");
+            _tray?.Notify("Aceleração removida", $"Velocidade {_service.TargetSpeed}/20, sem aceleração.");
         }
         catch (Exception ex)
         {

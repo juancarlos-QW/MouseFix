@@ -11,6 +11,22 @@ public sealed class AppSettings
     /// <summary>Pointer speed to keep (1-20). Acceleration stays off at any speed; only 10 is exact 1:1.</summary>
     public int PointerSpeed { get; set; } = MouseSettings.OneToOneSpeed;
 
+    /// <summary>Per-program speeds; the first running one wins, otherwise <see cref="PointerSpeed"/> is used.</summary>
+    public List<SpeedProfile> Profiles { get; set; } = [];
+
+    /// <summary>Check GitHub for a newer release at most once a day.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    public DateTime? LastUpdateCheck { get; set; }
+
+    /// <summary>Newest release seen on GitHub (kept so the banner shows again after a restart).</summary>
+    public string? AvailableUpdateVersion { get; set; }
+
+    public string? AvailableUpdateUrl { get; set; }
+
+    /// <summary>Version already announced in the tray, so each update is only announced once.</summary>
+    public string? NotifiedUpdateVersion { get; set; }
+
     /// <summary>
     /// Result of the emulator test: true if the emulator's aim follows the Windows cursor
     /// (so Windows pointer settings affect the game), false if it reads the sensor directly, null if not tested.

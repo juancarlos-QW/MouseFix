@@ -9,13 +9,14 @@ internal sealed class TrayIcon : IDisposable
 {
     private readonly Forms.NotifyIcon _icon;
 
-    public TrayIcon(Action open, Action fixNow, Action exit)
+    public TrayIcon(Action open, Action fixNow, Action report, Action exit)
     {
         using var stream = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/mousefix.ico")).Stream;
 
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Abrir MouseFix", null, (_, _) => open());
         menu.Items.Add("Remover aceleração agora", null, (_, _) => fixNow());
+        menu.Items.Add("Reportar problema", null, (_, _) => report());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Sair", null, (_, _) => exit());
 

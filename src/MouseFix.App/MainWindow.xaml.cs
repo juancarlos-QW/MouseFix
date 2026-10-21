@@ -27,10 +27,18 @@ public partial class MainWindow : FluentWindow
 
         AutoReapplyToggle.IsChecked = settings.AutoReapply;
         AutoStartToggle.IsChecked = AutoStart.IsEnabled;
-        SpeedSlider.Value = service.TargetSpeed;
+        UpdateCheckToggle.IsChecked = settings.CheckForUpdates;
+        // The slider is the default speed; a running program's profile may be in effect instead.
+        SpeedSlider.Value = settings.PointerSpeed;
+        VersionText.Text = $"Versão {CurrentVersion.ToString(3)}";
         _initializing = false;
         Refresh();
     }
+
+    private static Version CurrentVersion => typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0);
+
+    /// <summary>Raised when the user turns update checks on, so the app checks right away.</summary>
+    public event EventHandler? CheckForUpdatesRequested;
 
     // Never taller than the screen minus the taskbar, and centred in that area.
     private void FitToWorkArea()
@@ -70,6 +78,9 @@ public partial class MainWindow : FluentWindow
                 $"Velocidade {target.Speed}/20: todo movimento é multiplicado por {MouseSettings.SpeedMultiplier(target.Speed):0.###}x, devagar ou rápido."),
         };
 
+        if (_monitor.ActiveProfile is { } active && !current.IsAccelerationEnabled && speedMatches)
+            subtitle = $"Perfil \"{active.DisplayName}\" ativo. {subtitle}";
+
         StatusIcon.Symbol = icon;
         StatusIcon.SetResourceReference(ForegroundProperty, brush);
         StatusText.Text = title;
@@ -79,7 +90,7 @@ public partial class MainWindow : FluentWindow
         SpeedValue.Text = SpeedLabel(current.Speed);
         CurvesValue.Text = curvesLinear ? "Lineares" : "Padrão do Windows";
 
-        int chosen = target.Speed;
+        int chosen = _settings.PointerSpeed;
         SpeedChoiceValue.Text = SpeedLabel(chosen);
         SpeedChoiceHint.Text = chosen switch
         {
@@ -87,7 +98,12 @@ public partial class MainWindow : FluentWindow
             < MouseSettings.OneToOneSpeed => "Mais lento e sem aceleração. Abaixo de 10, o cursor precisa de mais de um ponto do sensor para andar 1 pixel.",
             _ => "Mais rápido e sem aceleração. Acima de 10, o cursor pula pixels; para ganhar rapidez sem isso, aumente o DPI do mouse.",
         };
+        if (_settings.Profiles.Count > 0)
+            SpeedChoiceHint.Text = "Usada quando nenhum programa com perfil está aberto. " + SpeedChoiceHint.Text;
         SpeedResetButton.Visibility = chosen == MouseSettings.OneToOneSpeed ? Visibility.Collapsed : Visibility.Visible;
+
+        RefreshProfiles();
+        RefreshUpdate();
 
         LoginInfo.IsOpen = _service.HasBackup;
         RestoreButton.IsEnabled = _service.HasBackup;
@@ -126,6 +142,111 @@ public partial class MainWindow : FluentWindow
 
     private void SpeedResetButton_Click(object sender, RoutedEventArgs e) =>
         SpeedSlider.Value = MouseSettings.OneToOneSpeed;
+
+    // Speed in effect while the emulator runs: its profile if there is one (BlueStacks-family emulators run as HD-Player).
+    private int EmulatorSpeed =>
+        _settings.Profiles.FirstOrDefault(p => p.ProcessName.Equals("HD-Player", StringComparison.OrdinalIgnoreCase))?.Speed
+        ?? _settings.PointerSpeed;
+
+    private void RefreshProfiles()
+    {
+        ProfilesList.Children.Clear();
+        ProfilesHint.Text = _settings.Profiles.Count == 0
+            ? "Troque a velocidade sozinho quando um programa abrir (ex.: o emulador) e volte ao padrão quando ele fechar."
+            : "O primeiro programa aberto da lista define a velocidade. A aceleração fica sempre desligada.";
+
+        foreach (var profile in _settings.Profiles)
+        {
+            bool isActive = _monitor.ActiveProfile == profile;
+            var row = new System.Windows.Controls.Grid { Margin = new Thickness(0, 6, 0, 0) };
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+
+            var name = new Wpf.Ui.Controls.TextBlock
+            {
+                Text = isActive ? $"{profile.DisplayName}  · ativo agora" : profile.DisplayName,
+                FontTypography = isActive ? FontTypography.BodyStrong : FontTypography.Body,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = $"{profile.ProcessName}.exe",
+            };
+            var speed = new Wpf.Ui.Controls.TextBlock
+            {
+                Text = SpeedLabel(profile.Speed),
+                FontTypography = FontTypography.BodyStrong,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 4, 0),
+            };
+            var remove = new Wpf.Ui.Controls.Button
+            {
+                Icon = new SymbolIcon(SymbolRegular.Delete24),
+                Appearance = ControlAppearance.Transparent,
+                ToolTip = "Remover perfil",
+            };
+            remove.Click += (_, _) => Run(() =>
+            {
+                _settings.Profiles.Remove(profile);
+                _settings.Save(AppSettings.DefaultPath);
+                Log.Info($"Perfil removido: {profile.DisplayName}");
+                _monitor.CheckNow();
+            });
+
+            System.Windows.Controls.Grid.SetColumn(speed, 1);
+            System.Windows.Controls.Grid.SetColumn(remove, 2);
+            row.Children.Add(name);
+            row.Children.Add(speed);
+            row.Children.Add(remove);
+            ProfilesList.Children.Add(row);
+        }
+    }
+
+    private void AddProfileButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ProfileWindow(_settings.PointerSpeed) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Result is not { } profile)
+            return;
+
+        Run(() =>
+        {
+            // One profile per program: adding it again replaces the old speed.
+            _settings.Profiles.RemoveAll(p => p.ProcessName.Equals(profile.ProcessName, StringComparison.OrdinalIgnoreCase));
+            _settings.Profiles.Add(profile);
+            _settings.Save(AppSettings.DefaultPath);
+            Log.Info($"Perfil adicionado: {profile.DisplayName} ({profile.ProcessName}) → {profile.Speed}/20");
+            // Profiles act on the MouseFix settings, so make sure they are applied (and backed up) once.
+            if (!_service.HasBackup)
+                _service.RemoveAcceleration();
+            _monitor.CheckNow();
+        });
+    }
+
+    private void RefreshUpdate()
+    {
+        var available = UpdateChecker.ParseVersion(_settings.AvailableUpdateVersion);
+        bool show = _settings.CheckForUpdates && available is not null && UpdateChecker.IsNewer(available, CurrentVersion);
+        UpdateCard.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show)
+            UpdateTitle.Text = $"MouseFix {available!.ToString(3)} disponível (você tem a {CurrentVersion.ToString(3)})";
+    }
+
+    private void UpdateDownloadButton_Click(object sender, RoutedEventArgs e) => Run(() =>
+        ProblemReporter.OpenInBrowser(_settings.AvailableUpdateUrl ?? "https://github.com/juancarlos-QW/MouseFix/releases/latest"));
+
+    private void UpdateCheckToggle_Click(object sender, RoutedEventArgs e)
+    {
+        Run(() =>
+        {
+            _settings.CheckForUpdates = UpdateCheckToggle.IsChecked == true;
+            _settings.Save(AppSettings.DefaultPath);
+        });
+        if (_settings.CheckForUpdates)
+            CheckForUpdatesRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ReportButton_Click(object sender, RoutedEventArgs e) => Run(() => ProblemReporter.Open(_service, _monitor));
+
+    private void LogFolderButton_Click(object sender, RoutedEventArgs e) => Run(ProblemReporter.OpenLogFolder);
 
     private void RefreshEmulator()
     {
@@ -166,7 +287,7 @@ public partial class MainWindow : FluentWindow
                 ? $"Teste feito: a mira do {game} segue o cursor do Windows. Sensibilidade já ajustada para a " +
                   "velocidade atual (mesma sensação de antes do MouseFix)."
                 : $"Teste feito: a mira do {game} segue o cursor do Windows. Antes do MouseFix a velocidade era " +
-                  $"{_service.Original!.Speed}/20 e agora é {_service.TargetSpeed}/20, por isso a mira mudou. " +
+                  $"{_service.Original!.Speed}/20 e agora é {EmulatorSpeed}/20, por isso a mira mudou. " +
                   $"Com sensibilidade X {s:0.00} a sensação volta a ser a de antes."
             : $"Teste feito: a mira do {game} segue o cursor do Windows, então as configurações do MouseFix chegam até o jogo.",
     };
@@ -183,7 +304,7 @@ public partial class MainWindow : FluentWindow
             return null;
 
         double baseSensitivity = _settings.EmulatorSensitivityBeforeAdjust ?? aim.Sensitivity;
-        double ratio = MouseSettings.SpeedMultiplier(original.Speed) / MouseSettings.SpeedMultiplier(_service.TargetSpeed);
+        double ratio = MouseSettings.SpeedMultiplier(original.Speed) / MouseSettings.SpeedMultiplier(EmulatorSpeed);
         return Math.Round(baseSensitivity * ratio, 2);
     }
 
