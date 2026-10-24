@@ -40,11 +40,15 @@ public sealed class ProtectionMonitor
     private int _tick;
     private string? _lastError;
 
-    public ProtectionMonitor(MouseFixService service, Func<bool> isEnabled, Func<IReadOnlyList<SpeedProfile>> profiles)
+    private readonly ChangeHistory _history;
+
+    public ProtectionMonitor(MouseFixService service, Func<bool> isEnabled, Func<IReadOnlyList<SpeedProfile>> profiles,
+        ChangeHistory history)
     {
         _service = service;
         _isEnabled = isEnabled;
         _profiles = profiles;
+        _history = history;
         _hook = WndProc;
         _timer.Tick += (_, _) => Check();
     }
@@ -102,10 +106,17 @@ public sealed class ProtectionMonitor
                 {
                     ActiveProfile = active;
                     // A profile switch is something the user asked for, so apply it even with automatic protection off.
-                    _service.EnsureFixed();
-                    Log.Info(active is null
-                        ? $"Nenhum perfil ativo; velocidade padrão {_service.TargetSpeed}/20."
-                        : $"Perfil \"{active.DisplayName}\" ativo; velocidade {active.Speed}/20.");
+                    bool applied = _service.EnsureFixed();
+                    string description = active is null
+                        ? $"Voltou à velocidade padrão {_service.TargetSpeed}/20"
+                        : $"Perfil \"{active.DisplayName}\": velocidade {active.Speed}/20";
+                    Log.Info(description);
+                    if (applied)
+                    {
+                        string? problem = _service.VerifyTarget();
+                        _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.Profile, description, problem is null, problem,
+                            active?.DisplayName));
+                    }
                     ProfileChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
@@ -126,6 +137,9 @@ public sealed class ProtectionMonitor
             {
                 LastExternalChange = $"{what} (em primeiro plano: {who})";
                 Log.Info($"Mudança externa no mouse: {LastExternalChange}. Configuração do MouseFix reaplicada.");
+                string? problem = _service.VerifyTarget();
+                _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.OtherProgram, $"Outro programa mudou: {what}. Desfeito.",
+                    problem is null, problem, who));
                 Reapplied?.Invoke(this, EventArgs.Empty);
                 TrackFight(who);
             }
@@ -162,8 +176,9 @@ public sealed class ProtectionMonitor
         try
         {
             GetWindowThreadProcessId(GetForegroundWindow(), out uint pid);
-            if (pid == 0)
-                return "desconhecido";
+            // With MouseFix itself in front, the program that made the change ran in the background: don't blame ourselves.
+            if (pid == 0 || pid == Environment.ProcessId)
+                return "não identificado (em segundo plano)";
             using var process = Process.GetProcessById((int)pid);
             return process.ProcessName;
         }

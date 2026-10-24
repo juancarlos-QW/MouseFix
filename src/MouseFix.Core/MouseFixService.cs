@@ -49,13 +49,25 @@ public sealed class MouseFixService
     /// <summary>Writes the given settings as-is, without touching the backup (used by tests that change speed temporarily).</summary>
     public void Apply(MouseSettings settings) => _store.Write(settings);
 
-    /// <summary>Applies the user's chosen settings. The first call saves the original settings; later calls keep that backup.</summary>
-    public void ApplyTarget()
+    /// <summary>
+    /// Applies the user's chosen settings and reads them back. The first call saves the original settings;
+    /// later calls keep that backup. Returns null when Windows has exactly the chosen settings, otherwise what didn't take.
+    /// </summary>
+    public string? ApplyTarget()
     {
         if (!_backup.Exists)
             _backup.Save(_store.Read());
 
         _store.Write(BuildTarget());
+        return VerifyTarget();
+    }
+
+    /// <summary>Null when Windows currently has the chosen settings; otherwise a description of what differs.</summary>
+    public string? VerifyTarget()
+    {
+        var current = _store.Read();
+        var target = BuildTarget();
+        return current.Equals(target) ? null : SettingsChange.Describe(current, target);
     }
 
     /// <summary>
@@ -75,8 +87,11 @@ public sealed class MouseFixService
         return true;
     }
 
-    /// <summary>Restores the backed-up settings, or Windows defaults when there is no backup.</summary>
-    public void Restore()
+    /// <summary>
+    /// Restores the backed-up settings (or Windows defaults when there is no backup) and reads them back.
+    /// Returns null when restored; otherwise what didn't take, and the backup is kept so the user can try again.
+    /// </summary>
+    public string? Restore()
     {
         var original = _backup.Load() ?? new MouseSettings(
             Acceleration: 1,
@@ -87,6 +102,14 @@ public sealed class MouseFixService
             SmoothMouseCurve.WindowsDefaultY);
 
         _store.Write(original);
+
+        var current = _store.Read();
+        // A backup without scroll lines (made by older versions) doesn't touch scrolling, so don't check it.
+        var expected = original.ScrollLines is null ? original with { ScrollLines = current.ScrollLines } : original;
+        if (!current.Equals(expected))
+            return SettingsChange.Describe(current, expected);
+
         _backup.Delete();
+        return null;
     }
 }

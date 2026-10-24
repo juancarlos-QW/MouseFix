@@ -200,13 +200,48 @@ public sealed class MouseFixServiceTests : IDisposable
         Assert.Equal(expected, MouseSettings.SpeedForMultiplier(multiplier));
     }
 
+    [Fact]
+    public void Applying_reports_success_after_reading_the_settings_back()
+    {
+        Assert.Null(_service.ApplyTarget());
+    }
+
+    [Fact]
+    public void Applying_reports_what_did_not_take_when_windows_refuses_a_value()
+    {
+        _store.IgnoreSpeedWrites = true;
+
+        var problem = _service.ApplyTarget();
+
+        Assert.NotNull(problem);
+        Assert.Contains("velocidade 14/20", problem);
+    }
+
+    [Fact]
+    public void A_failed_restore_keeps_the_backup_so_the_user_can_try_again()
+    {
+        _service.ApplyTarget();
+        _store.IgnoreSpeedWrites = true;
+
+        Assert.NotNull(_service.Restore());
+        Assert.True(_service.HasBackup);
+
+        _store.IgnoreSpeedWrites = false;
+        Assert.Null(_service.Restore());
+        Assert.False(_service.HasBackup);
+    }
+
     private sealed class FakeStore : IMouseSettingsStore
     {
         public required MouseSettings Settings { get; set; }
 
+        /// <summary>Simulates Windows not accepting a new pointer speed.</summary>
+        public bool IgnoreSpeedWrites { get; set; }
+
         public MouseSettings Read() => Settings;
 
-        public void Write(MouseSettings settings) => Settings = settings;
+        public void Write(MouseSettings settings) =>
+            Settings = IgnoreSpeedWrites ? settings with { Speed = Settings.Speed } : settings;
 
         public int GetDisplayScalePercent() => 125;
     }

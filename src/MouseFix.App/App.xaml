@@ -121,6 +121,32 @@
                 </Setter>
             </Style>
 
+            <!-- Big solid blue action button (the main "Remover aceleração"). -->
+            <Style x:Key="MfPrimaryButton" TargetType="Button">
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" CornerRadius="10" Background="{StaticResource MfAccent}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#3A8FFF" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#1466D6" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bg" Property="Opacity" Value="0.45" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style x:Key="MfDividerStyle" TargetType="Border">
                 <Setter Property="Height" Value="1" />
                 <Setter Property="Background" Value="{StaticResource MfDivider}" />

@@ -19,24 +19,24 @@ Funciona no Windows 10 e 11 (64 bits).
 
 ## O que ele faz
 
-**No Windows**
-- Desliga **"Aumentar precisão do ponteiro"** (a aceleração do Windows).
-- Coloca a velocidade do ponteiro em **10/20**, o único valor 1:1 exato (1 ponto do sensor = 1 pixel).
-- Ou **escolha outra velocidade (1 a 20)** sem ligar a aceleração: a proteção automática mantém a velocidade que você escolheu.
-- Ajuste também a **velocidade de rolagem** (linhas por giro da roda). Se quiser mesmo a aceleração, há um interruptor para ligá-la; o MouseFix respeita a escolha.
-- As mudanças só valem quando você clica em **Aplicar configurações**.
-- Grava curvas lineares de proteção (o conhecido "MarkC fix"), para jogos antigos que religam a aceleração sozinhos.
-- **Guarda suas configurações originais** e volta tudo com o botão **Restaurar**.
+**Tela única, sem complicação**
+- Um botão grande: **Remover aceleração**. Desliga "Aumentar precisão do ponteiro" (a aceleração do Windows) na hora.
+- **Velocidade do ponteiro (1 a 20)** sem aceleração. Só 10/20 é 1:1 exato (1 ponto do sensor = 1 pixel). Muda só o Windows, não o DPI do mouse.
+- **Aplica e verifica:** depois de cada mudança, o MouseFix lê o Windows de volta e mostra "Aplicado e verificado" ou exatamente o que não pegou.
+- **Histórico:** o que mudou, quando, quem mudou (você, um perfil ou outro programa, com o nome) e se foi verificado.
+- **Guarda suas configurações originais** e volta tudo com **Restaurar original**.
+- Em Configurações: velocidade de rolagem, interruptor de aceleração (se você quiser mesmo ligá-la), perfis, emulador, testes e ajuda.
+- Grava curvas lineares de proteção (o "MarkC fix"): se algum programa ligar a aceleração, o movimento continua igual. Valem depois de sair da conta do Windows e entrar de novo uma vez.
 
 **Em segundo plano (na bandeja)**
-- **Proteção automática:** se algum programa religar a aceleração, o MouseFix desliga de novo em menos de 1 segundo.
+- **Proteção automática:** se algum programa mudar a aceleração ou a velocidade, o MouseFix desfaz em até 0,1 segundo e anota no histórico quem foi.
 - **Perfis por programa:** escolha uma velocidade para um programa (ex.: o emulador). Quando ele abre, o MouseFix troca a velocidade sozinho; quando fecha, volta ao padrão. A aceleração fica sempre desligada.
 - Opção de **iniciar com o Windows**.
 - **Aviso de versão nova** (pode desligar): consulta o GitHub uma vez por dia.
 - **Reportar problema:** abre o GitHub com um relatório já preenchido (versão, Windows e log), que você revisa antes de enviar.
 - Avisa se um software de mouse (Razer Synapse, Logitech G HUB, Corsair iCUE...) está aberto, porque eles podem aplicar aceleração no driver.
 
-**Testes (menu "Testes")**
+**Testes (em Configurações)**
 - **Precisão do Windows:** lê o sensor direto (Raw Input) e compara com o cursor em várias velocidades. Mostra "1:1 confirmado" ou "aceleração detectada".
 - **Distância:** você arrasta o mouse a mesma distância devagar e rápido. Mostra se o mouse ou o driver dele aplica aceleração, o **DPI real** e o **polling rate**.
 

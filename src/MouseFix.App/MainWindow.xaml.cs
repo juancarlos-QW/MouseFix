@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 using MouseFix.Core;
 using Wpf.Ui.Controls;
 using Button = Wpf.Ui.Controls.Button;
@@ -10,27 +12,31 @@ using TextBlock = System.Windows.Controls.TextBlock;
 
 namespace MouseFix.App;
 
+/// <summary>
+/// One simple main screen (status, "Remover aceleração", pointer speed, verification), plus History and Settings pages.
+/// Every change is applied right away, read back from Windows to verify it, and recorded in the history.
+/// </summary>
 public partial class MainWindow : FluentWindow
 {
     private readonly MouseFixService _service;
     private readonly AppSettings _settings;
     private readonly ProtectionMonitor _monitor;
+    private readonly ChangeHistory _history;
     private EmulatorGameProfile? _emulatorProfile;
-    // The slider raises ValueChanged while XAML loads and when its value is set from code; ignore those.
+    // Controls raise change events while XAML loads and when set from code; ignore those.
     private bool _initializing = true;
 
-    // Choices on "Visão geral" take effect only when the user clicks "Aplicar configurações".
-    private int _pendingSpeed;
-    private bool _pendingAcceleration;
-    private int _pendingScroll;
-    // Result of the last one-click action, shown in the footer until the user changes something.
-    private string? _feedback;
+    // The speed slider applies once the user stops moving it, not on every notch.
+    private readonly DispatcherTimer _speedApplyTimer = new() { Interval = TimeSpan.FromMilliseconds(450) };
+    // Keeps the status honest while the window is open, even if nothing in MouseFix triggered a refresh.
+    private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
-    public MainWindow(MouseFixService service, AppSettings settings, ProtectionMonitor monitor)
+    public MainWindow(MouseFixService service, AppSettings settings, ProtectionMonitor monitor, ChangeHistory history)
     {
         _service = service;
         _settings = settings;
         _monitor = monitor;
+        _history = history;
 
         InitializeComponent();
         FitToWorkArea();
@@ -38,13 +44,26 @@ public partial class MainWindow : FluentWindow
         AutoReapplyToggle.IsChecked = settings.AutoReapply;
         AutoStartToggle.IsChecked = AutoStart.IsEnabled;
         UpdateCheckToggle.IsChecked = settings.CheckForUpdates;
-        VersionText.Text = $"Versão {CurrentVersion.ToString(3)}";
+        SpeedSlider.Value = settings.PointerSpeed;
+        AccelToggle.IsChecked = settings.AccelerationEnabled;
         AboutText.Text = $"MouseFix {CurrentVersion.ToString(3)}";
-        LoadPendingFromSettings();
         _initializing = false;
-        NavHome.IsChecked = true;
+
+        _speedApplyTimer.Tick += (_, _) => ApplySpeedNow();
+        _statusTimer.Tick += (_, _) => RefreshStatus();
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+                _statusTimer.Start();
+            else
+                _statusTimer.Stop();
+        };
+        _history.Changed += (_, _) => RefreshHistory();
+        ShowPage(Page.Home);
         Refresh();
     }
+
+    private enum Page { Home, History, Settings }
 
     private static Version CurrentVersion => typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0);
 
@@ -66,116 +85,61 @@ public partial class MainWindow : FluentWindow
         Top = area.Top + (area.Height - Height) / 2;
     }
 
-    // ---------- Navigation ----------
+    // ---------- Pages ----------
 
-    private void Nav_Checked(object sender, RoutedEventArgs e)
+    private void ShowPage(Page page)
     {
-        if (PageHome is null)
-            return; // still loading
-        var pages = new (RadioButton Nav, UIElement Page)[]
-        {
-            (NavHome, PageHome), (NavProfiles, PageProfiles), (NavEmulator, PageEmulator),
-            (NavTests, PageTests), (NavSettings, PageSettings),
-        };
-        foreach (var (nav, page) in pages)
-            page.Visibility = nav.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        // Apply / restore belong to the pointer settings on the overview.
-        Footer.Visibility = NavHome.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PageHome.Visibility = page == Page.Home ? Visibility.Visible : Visibility.Collapsed;
+        PageHistory.Visibility = page == Page.History ? Visibility.Visible : Visibility.Collapsed;
+        PageSettings.Visibility = page == Page.Settings ? Visibility.Visible : Visibility.Collapsed;
+        MainHeaderButtons.Visibility = page == Page.Home ? Visibility.Visible : Visibility.Collapsed;
+        SubPageHeader.Visibility = page == Page.Home ? Visibility.Collapsed : Visibility.Visible;
+        PageTitleText.Text = page == Page.History ? "Histórico" : "Configurações";
+        if (page == Page.History)
+            RefreshHistory();
     }
 
-    private void GoToEmulator_Click(object sender, RoutedEventArgs e) => NavEmulator.IsChecked = true;
+    private void HistoryButton_Click(object sender, RoutedEventArgs e) => ShowPage(Page.History);
 
-    private void CurrentProfile_Click(object sender, RoutedEventArgs e) => NavProfiles.IsChecked = true;
+    private void SettingsButton_Click(object sender, RoutedEventArgs e) => ShowPage(Page.Settings);
+
+    private void BackButton_Click(object sender, RoutedEventArgs e) => ShowPage(Page.Home);
 
     private void GitHubButton_Click(object sender, RoutedEventArgs e) =>
         Run(() => ProblemReporter.OpenInBrowser("https://github.com/juancarlos-QW/MouseFix"));
 
-    // ---------- Pending pointer settings ----------
+    // ---------- Apply + verify + record ----------
 
-    private int CurrentScrollLines => _service.Current.ScrollLines ?? 3;
-
-    private void LoadPendingFromSettings()
+    /// <summary>Applies the settings in <see cref="_settings"/>, verifies them and records the result.</summary>
+    private void ApplyAndRecord(string description)
     {
-        _pendingSpeed = _settings.PointerSpeed;
-        _pendingAcceleration = _settings.AccelerationEnabled;
-        _pendingScroll = _settings.ScrollLines ?? CurrentScrollLines;
-
-        bool wasInitializing = _initializing;
-        _initializing = true;
-        SpeedSlider.Value = _pendingSpeed;
-        AccelToggle.IsChecked = _pendingAcceleration;
-        _initializing = wasInitializing;
-    }
-
-    private bool HasPendingChanges =>
-        _pendingSpeed != _settings.PointerSpeed ||
-        _pendingAcceleration != _settings.AccelerationEnabled ||
-        _pendingScroll != (_settings.ScrollLines ?? CurrentScrollLines);
-
-    private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_initializing)
-            return;
-        _pendingSpeed = (int)Math.Round(e.NewValue);
-        RefreshPointerPanel();
-    }
-
-    private void SpeedResetButton_Click(object sender, RoutedEventArgs e) => SpeedSlider.Value = MouseSettings.OneToOneSpeed;
-
-    private void AccelToggle_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_initializing)
-            return;
-        _pendingAcceleration = AccelToggle.IsChecked == true;
-        RefreshPointerPanel();
-    }
-
-    private void ScrollDown_Click(object sender, RoutedEventArgs e) => ChangeScroll(-1);
-
-    private void ScrollUp_Click(object sender, RoutedEventArgs e) => ChangeScroll(+1);
-
-    private void ChangeScroll(int delta)
-    {
-        _pendingScroll = Math.Clamp(_pendingScroll + delta, TargetOptions.MinScrollLines, TargetOptions.MaxScrollLines);
-        RefreshPointerPanel();
-    }
-
-    private void FixButton_Click(object sender, RoutedEventArgs e) => Run(() =>
-    {
-        _settings.PointerSpeed = _pendingSpeed;
-        _settings.AccelerationEnabled = _pendingAcceleration;
-        // Start managing scrolling only once the user actually picks a value here.
-        if (_settings.ScrollLines is not null || _pendingScroll != CurrentScrollLines)
-            _settings.ScrollLines = _pendingScroll;
         _settings.Save(AppSettings.DefaultPath);
-        _service.ApplyTarget();
-        Log.Info($"Configurações aplicadas: velocidade {_pendingSpeed}/20, aceleração " +
-                 $"{(_pendingAcceleration ? "ligada" : "desligada")}, rolagem {_pendingScroll} linha(s)");
-    });
+        string? problem = _service.ApplyTarget();
+        Record(ChangeSource.User, description, problem);
+    }
 
-    private void RestoreButton_Click(object sender, RoutedEventArgs e) => Run(() =>
+    private void Record(ChangeSource source, string description, string? problem)
     {
-        _service.Restore();
-        LoadPendingFromSettings();
-    });
+        _history.Add(new ChangeEntry(DateTime.Now, source, description, problem is null, problem));
+        Log.Info(problem is null ? $"{description} (verificado)" : $"{description} — NÃO aplicado: {problem}");
+    }
 
     private void RemoveAccelButton_Click(object sender, RoutedEventArgs e) => Run(() => RemoveAccelerationNow());
 
     /// <summary>
-    /// One click, no "Aplicar" needed: turns acceleration off in Windows (keeping the chosen speed and scrolling)
-    /// and in the emulator's aim controls when possible. Returns a short summary of what was done.
+    /// One click: turns acceleration off in Windows (keeping the chosen speed and scrolling) and in the emulator's aim
+    /// controls when possible, verifies it and records it. Returns a short summary of what was done.
     /// </summary>
     public string RemoveAccelerationNow()
     {
         _settings.AccelerationEnabled = false;
-        _settings.Save(AppSettings.DefaultPath);
-        _pendingAcceleration = false;
         _initializing = true;
         AccelToggle.IsChecked = false;
         _initializing = false;
-        _service.ApplyTarget();
+        _settings.Save(AppSettings.DefaultPath);
+        string? problem = _service.ApplyTarget();
 
-        string summary = "Aceleração do Windows removida.";
+        string summary = problem is null ? "Aceleração do Windows removida." : $"Não foi possível remover tudo: {problem}.";
         var emulator = BlueStacksProfiles.Find(BlueStacksProfiles.DefaultRoot).FirstOrDefault(p => p.AnyAcceleration);
         if (emulator is not null)
         {
@@ -189,94 +153,162 @@ public partial class MainWindow : FluentWindow
                 summary += $" A aceleração do {emulator.EmulatorName} também foi desligada.";
             }
         }
-        Log.Info($"Remover aceleração: {summary}");
-        _feedback = summary;
+        Record(ChangeSource.User, summary, problem);
         return summary;
     }
+
+    private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_initializing)
+            return;
+        RefreshSpeedText((int)Math.Round(e.NewValue));
+        _speedApplyTimer.Stop();
+        _speedApplyTimer.Start();
+    }
+
+    private void ApplySpeedNow()
+    {
+        _speedApplyTimer.Stop();
+        int speed = (int)Math.Round(SpeedSlider.Value);
+        if (speed == _settings.PointerSpeed && _service.HasBackup)
+            return;
+        Run(() =>
+        {
+            _settings.PointerSpeed = speed;
+            ApplyAndRecord($"Velocidade do ponteiro: {SpeedLabel(speed)}");
+        });
+    }
+
+    private void SpeedResetButton_Click(object sender, RoutedEventArgs e) => SpeedSlider.Value = MouseSettings.OneToOneSpeed;
+
+    private void AccelToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        bool on = AccelToggle.IsChecked == true;
+        Run(() =>
+        {
+            _settings.AccelerationEnabled = on;
+            ApplyAndRecord(on ? "Aceleração ligada (escolha sua)" : "Aceleração desligada");
+        });
+    }
+
+    private void ScrollDown_Click(object sender, RoutedEventArgs e) => ChangeScroll(-1);
+
+    private void ScrollUp_Click(object sender, RoutedEventArgs e) => ChangeScroll(+1);
+
+    private void ChangeScroll(int delta) => Run(() =>
+    {
+        int lines = Math.Clamp((_settings.ScrollLines ?? CurrentScrollLines) + delta,
+            TargetOptions.MinScrollLines, TargetOptions.MaxScrollLines);
+        _settings.ScrollLines = lines;
+        ApplyAndRecord($"Velocidade de rolagem: {LinesLabel(lines)}");
+    });
+
+    private int CurrentScrollLines => _service.Current.ScrollLines ?? 3;
+
+    private void RestoreButton_Click(object sender, RoutedEventArgs e) => Run(() =>
+    {
+        string? problem = _service.Restore();
+        Record(ChangeSource.Restore, "Configurações originais do Windows restauradas", problem);
+    });
 
     // ---------- Refresh ----------
 
     public void Refresh()
     {
-        var current = _service.Current;
-        var target = _service.BuildTarget();
+        RefreshStatus();
 
-        // Status pill: what Windows is doing right now.
-        (SymbolRegular icon, string brush, string text) = current.IsAccelerationEnabled
-            ? (SymbolRegular.Warning24, "MfWarning", "Aceleração ligada")
-            : current.Speed == MouseSettings.OneToOneSpeed
-                ? (SymbolRegular.CheckmarkCircle24, "MfSuccess", "Sem aceleração · 1:1")
-                : (SymbolRegular.CheckmarkCircle24, "MfSuccess", $"Sem aceleração · {current.Speed}/20");
-        StatusIcon.Symbol = icon;
-        StatusIcon.SetResourceReference(ForegroundProperty, brush);
-        StatusText.Text = text;
-
-        AccelValue.Text = current.IsAccelerationEnabled ? "Ligada" : "Desligada";
-        SpeedValue.Text = SpeedLabel(current.Speed);
-        ScrollCurrentValue.Text = current.ScrollLines is int lines ? LinesLabel(lines) : "—";
-        CurvesValue.Text = current.SmoothMouseXCurve.AsSpan().SequenceEqual(SmoothMouseCurve.WindowsDefaultX) ? "Padrão do Windows" : "Lineares";
+        AccelHint.Text = _settings.AccelerationEnabled
+            ? "Ligada: o cursor anda mais quando você move rápido. Não recomendado para jogos."
+            : "Desligada: movimento consistente e previsível (recomendado).";
+        int lines = _settings.ScrollLines ?? CurrentScrollLines;
+        ScrollValue.Text = $"{LinesLabel(lines)} por giro da roda";
+        ScrollNumber.Text = lines.ToString();
+        ScrollDown.IsEnabled = lines > TargetOptions.MinScrollLines;
+        ScrollUp.IsEnabled = lines < TargetOptions.MaxScrollLines;
         LoginInfo.IsOpen = _service.HasBackup;
-
-        var active = _monitor.ActiveProfile;
-        CurrentProfileText.Text = active is null
-            ? $"Padrão · {SpeedLabel(_settings.PointerSpeed)}"
-            : $"{active.DisplayName} · {SpeedLabel(active.Speed)}";
+        RestoreButton.IsEnabled = _service.HasBackup;
 
         var mouseSoftware = MouseSoftware.FindRunning();
         MouseSoftwareInfo.IsOpen = mouseSoftware.Count > 0;
         MouseSoftwareInfo.Title = $"{string.Join(", ", mouseSoftware)} aberto";
-        MouseSoftwareInfo.Message = "Programas de mouse podem aplicar aceleração no driver, antes do Windows, onde o MouseFix " +
-                                    "não alcança. O teste de distância mostra se isso acontece.";
+        MouseSoftwareInfo.Message = "Programas de mouse podem aplicar aceleração no driver, onde o MouseFix não alcança. " +
+                                    "O teste de distância mostra se isso acontece.";
 
-        RefreshPointerPanel(current, target);
         RefreshProfiles();
         RefreshUpdate();
         RefreshEmulator();
     }
 
-    private void RefreshPointerPanel() => RefreshPointerPanel(_service.Current, _service.BuildTarget());
-
-    private void RefreshPointerPanel(MouseSettings current, MouseSettings target)
+    /// <summary>
+    /// The cheap part: what Windows has right now. Also runs every second while the window is visible, so a change
+    /// made by another program shows up even when automatic protection is off.
+    /// </summary>
+    private void RefreshStatus()
     {
-        SpeedChoiceValue.Text = $"{_pendingSpeed} / 20";
-        SpeedChoiceHint.Text = (_pendingSpeed switch
+        var current = _service.Current;
+        int target = _service.TargetSpeed;
+        var active = _monitor.ActiveProfile;
+        string profile = active is null ? "" : $" · perfil {active.DisplayName}";
+
+        (string text, string sub, SymbolRegular icon, string iconBrush, string background) = current.IsAccelerationEnabled
+            ? _settings.AccelerationEnabled
+                ? ("Aceleração ligada", "Você escolheu deixar ligada (Configurações › Avançado).", SymbolRegular.Warning24, "MfWarning", "#33291A")
+                : ("Aceleração ligada", "O Windows está acelerando o movimento. Clique no botão abaixo.", SymbolRegular.DismissCircle24, "MfDanger", "#3A1A20")
+            : current.Speed == target
+                ? ("Sem aceleração", $"Velocidade {SpeedLabel(current.Speed)}{profile}", SymbolRegular.CheckmarkCircle24, "MfSuccess", "#123526")
+                : ("Sem aceleração", $"Velocidade {current.Speed}/20, mas a escolhida é {target}/20", SymbolRegular.Warning24, "MfWarning", "#33291A");
+        StatusText.Text = text;
+        StatusSubtext.Text = sub;
+        StatusIcon.Symbol = icon;
+        StatusIcon.SetResourceReference(ForegroundProperty, iconBrush);
+        StatusCircle.Background = (Brush)new BrushConverter().ConvertFromString(background)!;
+
+        if (!_speedApplyTimer.IsEnabled)
+            RefreshSpeedText(_settings.PointerSpeed);
+        RefreshVerification();
+
+        AccelValue.Text = current.IsAccelerationEnabled ? "Ligada" : "Desligada";
+        SpeedValue.Text = SpeedLabel(current.Speed);
+        ScrollCurrentValue.Text = current.ScrollLines is int l ? LinesLabel(l) : "—";
+        CurvesValue.Text = current.SmoothMouseXCurve.AsSpan().SequenceEqual(SmoothMouseCurve.WindowsDefaultX) ? "Padrão do Windows" : "Lineares";
+    }
+
+    private void RefreshSpeedText(int speed)
+    {
+        SpeedChoiceValue.Text = speed == MouseSettings.OneToOneSpeed ? "10 / 20 · 1:1" : $"{speed} / 20";
+        string factor = speed switch
         {
             MouseSettings.OneToOneSpeed => "1:1 exato: cada ponto do sensor move 1 pixel.",
-            < MouseSettings.OneToOneSpeed => $"{MouseSettings.SpeedMultiplier(_pendingSpeed):0.###}x, mais lento. Só 10 é 1:1 exato.",
-            _ => $"{MouseSettings.SpeedMultiplier(_pendingSpeed):0.###}x, mais rápido; acima de 10 o cursor pula pixels.",
-        }) + (_settings.Profiles.Count > 0 ? " Vale quando nenhum perfil está ativo." : "");
-        SpeedResetButton.Visibility = _pendingSpeed == MouseSettings.OneToOneSpeed ? Visibility.Collapsed : Visibility.Visible;
-
-        AccelHint.Text = _pendingAcceleration
-            ? "Ligada: o cursor anda mais quando você move rápido. Não recomendado para jogos."
-            : "Movimento consistente e previsível.";
-
-        ScrollValue.Text = LinesLabel(_pendingScroll);
-        ScrollNumber.Text = _pendingScroll.ToString();
-        ScrollDown.IsEnabled = _pendingScroll > TargetOptions.MinScrollLines;
-        ScrollUp.IsEnabled = _pendingScroll < TargetOptions.MaxScrollLines;
-
-        RestoreButton.IsEnabled = _service.HasBackup;
-        bool pending = HasPendingChanges;
-        bool inSync = current.Equals(target) && _service.HasBackup;
-        FixButton.IsEnabled = pending || !inSync;
-
-        if (pending)
-            _feedback = null;
-        (SymbolRegular icon, string brush, string text) = (pending, inSync) switch
-        {
-            (true, _) => (SymbolRegular.Info24, "MfTextMuted", "Alterações ainda não aplicadas."),
-            (false, true) when _feedback is not null => (SymbolRegular.CheckmarkCircle24, "MfSuccess", _feedback),
-            (false, true) when _monitor.ActiveProfile is { } p =>
-                (SymbolRegular.CheckmarkCircle24, "MfSuccess", $"Aplicado. Perfil \"{p.DisplayName}\" ativo agora ({p.Speed}/20)."),
-            (false, true) => (SymbolRegular.CheckmarkCircle24, "MfSuccess", "Tudo aplicado e protegido."),
-            (false, false) when !_service.HasBackup =>
-                (SymbolRegular.Info24, "MfTextMuted", "O MouseFix ainda não está aplicando nada. Clique em \"Aplicar configurações\"."),
-            _ => (SymbolRegular.Warning24, "MfWarning", "O Windows está diferente do que você escolheu. Clique em \"Aplicar configurações\"."),
+            < MouseSettings.OneToOneSpeed => $"{MouseSettings.SpeedMultiplier(speed):0.###}x, mais lento. Só 10 é 1:1 exato.",
+            _ => $"{MouseSettings.SpeedMultiplier(speed):0.###}x, mais rápido; acima de 10 o cursor pula pixels.",
         };
-        FooterIcon.Symbol = icon;
-        FooterIcon.SetResourceReference(ForegroundProperty, brush);
-        FooterText.Text = text;
+        SpeedChoiceHint.Text = $"{factor} Muda só o Windows, não o DPI do sensor do mouse.";
+        SpeedResetButton.Visibility = speed == MouseSettings.OneToOneSpeed ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // Shows the latest recorded change if it was verified or failed; otherwise checks Windows right now.
+    private void RefreshVerification()
+    {
+        var last = _history.Entries.FirstOrDefault();
+        string? live = _service.HasBackup ? _service.VerifyTarget() : null;
+
+        (SymbolRegular icon, string brush, string text) = (last, live) switch
+        {
+            ({ Verified: false } l, _) when DateTime.Now - l.Time < TimeSpan.FromMinutes(10) && live is not null =>
+                (SymbolRegular.ErrorCircle24, "MfDanger", $"Não foi possível aplicar: {l.Problem}."),
+            (_, null) when !_service.HasBackup =>
+                (SymbolRegular.Info24, "MfTextMuted", "O MouseFix ainda não aplicou nada. Clique em \"Remover aceleração\"."),
+            (_, not null) =>
+                (SymbolRegular.Warning24, "MfWarning", $"O Windows está diferente do escolhido: {live}."),
+            ({ Verified: true } l, null) when l.Time.Date == DateTime.Today =>
+                (SymbolRegular.CheckmarkCircle24, "MfSuccess", $"Aplicado e verificado às {l.Time:HH:mm}."),
+            _ => (SymbolRegular.CheckmarkCircle24, "MfSuccess", "Configuração verificada agora."),
+        };
+        VerifyIcon.Symbol = icon;
+        VerifyIcon.SetResourceReference(ForegroundProperty, brush);
+        VerifyText.Text = text;
     }
 
     private static string SpeedLabel(int speed) => speed == MouseSettings.OneToOneSpeed
@@ -284,6 +316,70 @@ public partial class MainWindow : FluentWindow
         : $"{speed}/20 ({MouseSettings.SpeedMultiplier(speed):0.###}x)";
 
     private static string LinesLabel(int lines) => lines == 1 ? "1 linha" : $"{lines} linhas";
+
+    // ---------- History ----------
+
+    private void RefreshHistory()
+    {
+        HistoryList.Children.Clear();
+        HistoryEmpty.Visibility = _history.Entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ClearHistoryButton.IsEnabled = _history.Entries.Count > 0;
+
+        foreach (var entry in _history.Entries.Take(100))
+        {
+            var row = new Grid { Margin = new Thickness(0, 8, 0, 8) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var (sourceIcon, who) = entry.Source switch
+            {
+                ChangeSource.User => (SymbolRegular.Person24, "Você"),
+                ChangeSource.Profile => (SymbolRegular.AppsList24, entry.Program is null ? "Perfil" : $"Perfil {entry.Program}"),
+                ChangeSource.OtherProgram => (SymbolRegular.Warning24, $"Outro programa: {entry.Program ?? "desconhecido"}"),
+                _ => (SymbolRegular.ArrowUndo24, "Restaurar"),
+            };
+            var icon = new SymbolIcon(sourceIcon) { FontSize = 20, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 12, 0) };
+            icon.SetResourceReference(ForegroundProperty, entry.Source == ChangeSource.OtherProgram ? "MfWarning" : "MfAccent");
+
+            var text = new StackPanel();
+            text.Children.Add(new TextBlock { Text = entry.Description, Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap });
+            var meta = new TextBlock
+            {
+                Text = $"{entry.Time:dd/MM HH:mm} · {who}{(entry.Count > 1 ? $" · {entry.Count}x" : "")}",
+                FontSize = 12,
+                Margin = new Thickness(0, 2, 0, 0),
+            };
+            meta.SetResourceReference(ForegroundProperty, "MfTextMuted");
+            text.Children.Add(meta);
+            if (!entry.Verified && entry.Problem is not null)
+            {
+                var problem = new TextBlock { Text = $"Não aplicado: {entry.Problem}", FontSize = 12, TextWrapping = TextWrapping.Wrap };
+                problem.SetResourceReference(ForegroundProperty, "MfDanger");
+                text.Children.Add(problem);
+            }
+
+            var badge = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0) };
+            var badgeIcon = new SymbolIcon(entry.Verified ? SymbolRegular.CheckmarkCircle24 : SymbolRegular.ErrorCircle24) { FontSize = 16 };
+            badgeIcon.SetResourceReference(ForegroundProperty, entry.Verified ? "MfSuccess" : "MfDanger");
+            var badgeText = new TextBlock { Text = entry.Verified ? "Verificado" : "Falhou", FontSize = 12, Margin = new Thickness(4, 0, 0, 0) };
+            badgeText.SetResourceReference(ForegroundProperty, entry.Verified ? "MfSuccess" : "MfDanger");
+            badge.Children.Add(badgeIcon);
+            badge.Children.Add(badgeText);
+
+            Grid.SetColumn(text, 1);
+            Grid.SetColumn(badge, 2);
+            row.Children.Add(icon);
+            row.Children.Add(text);
+            row.Children.Add(badge);
+            if (HistoryList.Children.Count > 0)
+                HistoryList.Children.Add(new Border { Height = 1, Background = (Brush)FindResource("MfDivider") });
+            HistoryList.Children.Add(row);
+        }
+        RefreshVerification();
+    }
+
+    private void ClearHistoryButton_Click(object sender, RoutedEventArgs e) => Run(_history.Clear);
 
     // ---------- Profiles ----------
 
@@ -296,48 +392,30 @@ public partial class MainWindow : FluentWindow
     {
         ProfilesList.Children.Clear();
         ProfilesEmpty.Visibility = _settings.Profiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ProfilesHint.Text = "Quando um programa da lista abrir (ex.: o emulador), o MouseFix troca a velocidade sozinho e volta " +
-                            $"à velocidade padrão, {SpeedLabel(_settings.PointerSpeed)}, quando ele fechar. Se vários estiverem abertos, " +
-                            "vale o primeiro da lista.";
+        ProfilesHint.Text = "Quando um programa da lista abrir (ex.: o emulador), a velocidade troca sozinha e volta à padrão, " +
+                            $"{SpeedLabel(_settings.PointerSpeed)}, quando ele fechar.";
 
-        for (int i = 0; i < _settings.Profiles.Count; i++)
+        foreach (var profile in _settings.Profiles)
         {
-            var profile = _settings.Profiles[i];
             bool isActive = _monitor.ActiveProfile == profile;
-            var row = new Grid { Margin = new Thickness(0, i == 0 ? 0 : 14, 0, 0) };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var icon = new SymbolIcon(SymbolRegular.Apps24) { FontSize = 22, VerticalAlignment = VerticalAlignment.Center };
-            icon.SetResourceReference(ForegroundProperty, isActive ? "MfAccent" : "MfTextMuted");
-            var name = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            name.Children.Add(new TextBlock
-            {
-                Text = profile.DisplayName,
-                Foreground = System.Windows.Media.Brushes.White,
-                FontSize = 15,
-                FontWeight = FontWeights.SemiBold,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-            });
-            var sub = new TextBlock { Text = isActive ? $"{profile.ProcessName}.exe · ativo agora" : $"{profile.ProcessName}.exe" };
+            var name = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            name.Children.Add(new TextBlock { Text = profile.DisplayName, Foreground = Brushes.White, FontWeight = FontWeights.SemiBold });
+            var sub = new TextBlock { Text = isActive ? $"{profile.ProcessName}.exe · ativo agora" : $"{profile.ProcessName}.exe", FontSize = 12 };
             sub.SetResourceReference(ForegroundProperty, isActive ? "MfAccent" : "MfTextMuted");
             name.Children.Add(sub);
             var speed = new TextBlock
             {
                 Text = SpeedLabel(profile.Speed),
-                Foreground = System.Windows.Media.Brushes.White,
-                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(12, 0, 8, 0),
+                Margin = new Thickness(12, 0, 4, 0),
             };
-            var remove = new Button
-            {
-                Icon = new SymbolIcon(SymbolRegular.Delete24),
-                Appearance = ControlAppearance.Transparent,
-                ToolTip = "Remover perfil",
-            };
+            var remove = new Button { Icon = new SymbolIcon(SymbolRegular.Delete24), Appearance = ControlAppearance.Transparent, ToolTip = "Remover perfil" };
             remove.Click += (_, _) => Run(() =>
             {
                 _settings.Profiles.Remove(profile);
@@ -346,10 +424,8 @@ public partial class MainWindow : FluentWindow
                 _monitor.CheckNow();
             });
 
-            Grid.SetColumn(name, 1);
-            Grid.SetColumn(speed, 2);
-            Grid.SetColumn(remove, 3);
-            row.Children.Add(icon);
+            Grid.SetColumn(speed, 1);
+            Grid.SetColumn(remove, 2);
             row.Children.Add(name);
             row.Children.Add(speed);
             row.Children.Add(remove);
@@ -372,7 +448,7 @@ public partial class MainWindow : FluentWindow
             Log.Info($"Perfil adicionado: {profile.DisplayName} ({profile.ProcessName}) → {profile.Speed}/20");
             // Profiles act on the MouseFix settings, so make sure they are applied (and backed up) once.
             if (!_service.HasBackup)
-                _service.ApplyTarget();
+                Record(ChangeSource.User, "Configurações do MouseFix aplicadas", _service.ApplyTarget());
             _monitor.CheckNow();
         });
     }
@@ -429,7 +505,7 @@ public partial class MainWindow : FluentWindow
 
         EmulatorTestButton.Content = _settings.EmulatorUsesWindowsCursor is null ? "Testar emulador" : "Testar de novo";
         EmulatorAdvice.Text = profile.AnyAcceleration
-            ? "O emulador está aplicando aceleração própria na mira. Feche o emulador e desligue acima."
+            ? "O emulador está aplicando aceleração própria na mira. Feche o emulador e desligue abaixo."
             : EmulatorAdviceFor(profile.GameName, aim);
 
         var suggested = SuggestedSensitivity(aim);
@@ -445,8 +521,7 @@ public partial class MainWindow : FluentWindow
                  "ajuste pela sensibilidade do emulador ou pelo DPI do mouse.",
         true => SuggestedSensitivity(aim) is double s
             ? Math.Abs(s - aim.Sensitivity) < 0.01
-                ? $"Teste feito: a mira do {game} segue o cursor do Windows. Sensibilidade já ajustada para a " +
-                  "velocidade atual (mesma sensação de antes do MouseFix)."
+                ? $"Teste feito: a mira do {game} segue o cursor do Windows. Sensibilidade já ajustada para a velocidade atual."
                 : $"Teste feito: a mira do {game} segue o cursor do Windows. Antes do MouseFix a velocidade era " +
                   $"{_service.Original!.Speed}/20 e agora é {EmulatorSpeed}/20, por isso a mira mudou. " +
                   $"Com sensibilidade X {s:0.00} a sensação volta a ser a de antes."
@@ -479,7 +554,9 @@ public partial class MainWindow : FluentWindow
         _settings.EmulatorSensitivityBeforeAdjust ??= aim.Sensitivity;
         _settings.Save(AppSettings.DefaultPath);
         BlueStacksProfiles.SetSelectedSensitivity(_emulatorProfile.FilePath, suggested);
-        Log.Info($"Sensibilidade do emulador ajustada de {aim.Sensitivity} para {suggested} em {_emulatorProfile.FilePath}");
+        var after = BlueStacksProfiles.Load(_emulatorProfile.EmulatorName, _emulatorProfile.GameName, _emulatorProfile.FilePath).SelectedAim;
+        Record(ChangeSource.User, $"Sensibilidade do emulador: {aim.Sensitivity:0.##} → {suggested:0.##}",
+            after is not null && Math.Abs(after.Sensitivity - suggested) < 0.005 ? null : "o arquivo do emulador não ficou com o valor novo");
     });
 
     private bool EnsureEmulatorClosed()
@@ -502,8 +579,10 @@ public partial class MainWindow : FluentWindow
     {
         if (_emulatorProfile is null || !EnsureEmulatorClosed())
             return;
-        int changed = BlueStacksProfiles.DisableMouseAcceleration(_emulatorProfile.FilePath);
-        Log.Info($"Aceleração do emulador desligada em {changed} controle(s) de {_emulatorProfile.FilePath}");
+        BlueStacksProfiles.DisableMouseAcceleration(_emulatorProfile.FilePath);
+        bool off = !BlueStacksProfiles.Load(_emulatorProfile.EmulatorName, _emulatorProfile.GameName, _emulatorProfile.FilePath).AnyAcceleration;
+        Record(ChangeSource.User, $"Aceleração do {_emulatorProfile.EmulatorName} desligada",
+            off ? null : "a aceleração do emulador continua ligada no arquivo");
     });
 
     // ---------- Tests and settings ----------
@@ -546,6 +625,7 @@ public partial class MainWindow : FluentWindow
         }
         catch (Exception ex)
         {
+            Log.Error("Erro ao aplicar", ex);
             MessageBox.Show(this, ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         AutoStartToggle.IsChecked = AutoStart.IsEnabled;

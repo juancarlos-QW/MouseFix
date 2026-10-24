@@ -81,7 +81,8 @@ public partial class App : Application
         // The speed in effect: the running program's profile, otherwise the default chosen in the window.
         _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath),
             () => new TargetOptions(monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed, settings.AccelerationEnabled, settings.ScrollLines));
-        _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles);
+        var history = new ChangeHistory(ChangeHistory.DefaultPath);
+        _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles, history);
         monitor.Reapplied += OnReapplied;
         monitor.ProfileChanged += OnProfileChanged;
         monitor.FightDetected += (_, program) => _tray?.Notify(
@@ -89,7 +90,7 @@ public partial class App : Application
             $"\"{program}\" mudou a aceleração ou a velocidade várias vezes no último minuto. O MouseFix desfez todas, " +
             "mas se a mira oscilar, procure a opção de mouse nesse programa.");
 
-        _window = new MainWindow(_service, settings, monitor);
+        _window = new MainWindow(_service, settings, monitor, history);
         _window.HiddenToTray += OnHiddenToTray;
         _window.CheckForUpdatesRequested += (_, _) => CheckForUpdates(force: true);
 
