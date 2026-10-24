@@ -84,6 +84,10 @@ public partial class App : Application
         _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles);
         monitor.Reapplied += OnReapplied;
         monitor.ProfileChanged += OnProfileChanged;
+        monitor.FightDetected += (_, program) => _tray?.Notify(
+            "Um programa está mudando o seu mouse",
+            $"\"{program}\" mudou a aceleração ou a velocidade várias vezes no último minuto. O MouseFix desfez todas, " +
+            "mas se a mira oscilar, procure a opção de mouse nesse programa.");
 
         _window = new MainWindow(_service, settings, monitor);
         _window.HiddenToTray += OnHiddenToTray;
@@ -198,7 +202,8 @@ public partial class App : Application
         if (DateTime.Now - _lastReapplyNotice < NotifyCooldown)
             return;
         _lastReapplyNotice = DateTime.Now;
-        _tray?.Notify("Aceleração bloqueada", "Um programa religou a aceleração do mouse e o MouseFix desligou de novo.");
+        _tray?.Notify("Configuração do mouse restaurada",
+            $"Outro programa mudou o mouse ({_monitor.LastExternalChange ?? "aceleração ou velocidade"}) e o MouseFix desfez.");
     }
 
     private void OnHiddenToTray(object? sender, EventArgs e)

@@ -40,7 +40,8 @@ public sealed class MouseFixService
         return options.AccelerationEnabled
             ? new MouseSettings(1, 6, 10, TargetSpeed, SmoothMouseCurve.WindowsDefaultX, SmoothMouseCurve.WindowsDefaultY, scroll)
             : new MouseSettings(0, 0, 0, TargetSpeed,
-                SmoothMouseCurve.LinearX(Math.Max(100, _store.GetDisplayScalePercent())), SmoothMouseCurve.LinearY(), scroll);
+                SmoothMouseCurve.LinearX(Math.Max(100, _store.GetDisplayScalePercent())),
+                SmoothMouseCurve.LinearY(SmoothMouseCurve.GainForSpeed(TargetSpeed)), scroll);
     }
 
     public bool IsFullyFixed => Current.Equals(BuildTarget());

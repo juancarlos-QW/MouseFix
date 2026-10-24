@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -22,10 +23,21 @@ public sealed class ProtectionMonitor
     private readonly MouseFixService _service;
     private readonly Func<bool> _isEnabled;
     private readonly Func<IReadOnlyList<SpeedProfile>> _profiles;
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    // Before the next sign-in the protection curves aren't active yet, so while acceleration is on (turned on by
+    // another program) movement really is accelerated: react fast. Reading the settings is cheap.
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+    // Listing processes for profiles is heavier, so that runs every 10th tick (once a second).
+    private const int ProfileCheckEveryTicks = 10;
+    // This many outside changes within the window means some program keeps fighting MouseFix.
+    private const int FightCount = 5;
+    private static readonly TimeSpan FightWindow = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan FightNoticeCooldown = TimeSpan.FromMinutes(10);
 
     // HwndSource only keeps a weak reference to hooks; hold the delegate so it isn't collected.
     private readonly HwndSourceHook _hook;
+    private readonly Queue<DateTime> _recentFixes = new();
+    private DateTime _lastFightNotice = DateTime.MinValue;
+    private int _tick;
     private string? _lastError;
 
     public ProtectionMonitor(MouseFixService service, Func<bool> isEnabled, Func<IReadOnlyList<SpeedProfile>> profiles)
@@ -38,6 +50,12 @@ public sealed class ProtectionMonitor
     }
 
     public event EventHandler? Reapplied;
+
+    /// <summary>Raised (at most every 10 minutes) when a program keeps changing the mouse; the argument is its name.</summary>
+    public event EventHandler<string>? FightDetected;
+
+    /// <summary>What the last outside change was and which program was in the foreground, for notifications.</summary>
+    public string? LastExternalChange { get; private set; }
 
     /// <summary>Raised when a profiled program starts or stops and the speed was switched.</summary>
     public event EventHandler? ProfileChanged;
@@ -77,21 +95,39 @@ public sealed class ProtectionMonitor
 
         try
         {
-            var active = SpeedProfiles.FindActive(_profiles(), IsRunning);
-            if (active != ActiveProfile)
+            if (_tick++ % ProfileCheckEveryTicks == 0)
             {
-                ActiveProfile = active;
-                // A profile switch is something the user asked for, so apply it even with automatic protection off.
-                _service.EnsureFixed();
-                Log.Info(active is null
-                    ? $"Nenhum perfil ativo; velocidade padrão {_service.TargetSpeed}/20."
-                    : $"Perfil \"{active.DisplayName}\" ativo; velocidade {active.Speed}/20.");
-                ProfileChanged?.Invoke(this, EventArgs.Empty);
+                var active = SpeedProfiles.FindActive(_profiles(), IsRunning);
+                if (active != ActiveProfile)
+                {
+                    ActiveProfile = active;
+                    // A profile switch is something the user asked for, so apply it even with automatic protection off.
+                    _service.EnsureFixed();
+                    Log.Info(active is null
+                        ? $"Nenhum perfil ativo; velocidade padrão {_service.TargetSpeed}/20."
+                        : $"Perfil \"{active.DisplayName}\" ativo; velocidade {active.Speed}/20.");
+                    ProfileChanged?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
             }
-            else if (_isEnabled() && _service.EnsureFixed())
+
+            if (!_isEnabled() || !_service.HasBackup)
+                return;
+
+            var current = _service.Current;
+            var expected = _service.BuildTarget();
+            if (current.Equals(expected))
+                return;
+
+            // Something outside MouseFix changed the mouse: note what and who, then put the user's settings back.
+            string what = SettingsChange.Describe(current, expected);
+            string who = ForegroundProcessName();
+            if (_service.EnsureFixed())
             {
-                Log.Info("Algo mudou a configuração do mouse; configuração do MouseFix reaplicada.");
+                LastExternalChange = $"{what} (em primeiro plano: {who})";
+                Log.Info($"Mudança externa no mouse: {LastExternalChange}. Configuração do MouseFix reaplicada.");
                 Reapplied?.Invoke(this, EventArgs.Empty);
+                TrackFight(who);
             }
         }
         catch (Exception ex)
@@ -105,6 +141,43 @@ public sealed class ProtectionMonitor
         }
         _lastError = null;
     }
+
+    private void TrackFight(string who)
+    {
+        var now = DateTime.Now;
+        _recentFixes.Enqueue(now);
+        while (_recentFixes.Count > 0 && now - _recentFixes.Peek() > FightWindow)
+            _recentFixes.Dequeue();
+
+        if (_recentFixes.Count >= FightCount && now - _lastFightNotice > FightNoticeCooldown)
+        {
+            _lastFightNotice = now;
+            Log.Info($"{_recentFixes.Count} mudanças externas no último minuto; provável responsável: {who}.");
+            FightDetected?.Invoke(this, who);
+        }
+    }
+
+    private static string ForegroundProcessName()
+    {
+        try
+        {
+            GetWindowThreadProcessId(GetForegroundWindow(), out uint pid);
+            if (pid == 0)
+                return "desconhecido";
+            using var process = Process.GetProcessById((int)pid);
+            return process.ProcessName;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return "desconhecido";
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
 
     private static bool IsRunning(string processName)
     {

@@ -19,7 +19,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\mousefix.ico</ApplicationIcon>
     <AssemblyName>MouseFix</AssemblyName>
-    <Version>1.2.1</Version>
+    <Version>1.2.2</Version>
     <Product>MouseFix</Product>
     <Description>Remove a aceleração do mouse no Windows e verifica emuladores</Description>
     <Copyright>Copyright (c) 2026 juancarlos-QW</Copyright>

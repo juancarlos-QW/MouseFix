@@ -120,6 +120,26 @@ public sealed class MouseFixServiceTests : IDisposable
     }
 
     [Fact]
+    public void Protection_curves_match_the_chosen_speed()
+    {
+        var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(6));
+
+        Assert.Equal(SmoothMouseCurve.LinearY(SmoothMouseCurve.GainForSpeed(6)), service.BuildTarget().SmoothMouseYCurve);
+        Assert.Equal(SmoothMouseCurve.LinearY(), _service.BuildTarget().SmoothMouseYCurve);
+    }
+
+    [Fact]
+    public void Curves_written_by_older_versions_are_replaced_by_the_protection()
+    {
+        _service.ApplyTarget();
+        // What 1.2.1 and earlier wrote: Y steps 16x too small.
+        _store.Settings = _store.Settings with { SmoothMouseYCurve = SmoothMouseCurve.FromPoints(0, 0x38000, 0x70000, 0xA8000, 0xE0000) };
+
+        Assert.True(_service.EnsureFixed());
+        Assert.Equal(SmoothMouseCurve.LinearY(), _store.Settings.SmoothMouseYCurve);
+    }
+
+    [Fact]
     public void Acceleration_turned_on_by_the_user_uses_windows_defaults_and_is_kept()
     {
         var service = new MouseFixService(_store, new BackupStore(_backupPath), () => new TargetOptions(10, AccelerationEnabled: true));

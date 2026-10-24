@@ -87,6 +87,28 @@ public sealed class BlueStacksProfilesTests : IDisposable
     }
 
     [Fact]
+    public void Built_in_mapping_is_used_when_the_user_never_customised_controls()
+    {
+        File.Delete(_file);
+        var builtIn = Path.Combine(_root, "BlueStacks_msi5", "Engine", "UserData", "InputMapper", "com.dts.freefireth.cfg");
+        File.WriteAllText(builtIn, SampleCfg);
+
+        var profile = Assert.Single(BlueStacksProfiles.Find(_root));
+
+        Assert.Equal(builtIn, profile.FilePath);
+        Assert.True(profile.AnyAcceleration);
+    }
+
+    [Fact]
+    public void Customised_mapping_wins_over_the_built_in_one()
+    {
+        var builtIn = Path.Combine(_root, "BlueStacks_msi5", "Engine", "UserData", "InputMapper", "com.dts.freefireth.cfg");
+        File.WriteAllText(builtIn, SampleCfg);
+
+        Assert.Equal(_file, Assert.Single(BlueStacksProfiles.Find(_root)).FilePath);
+    }
+
+    [Fact]
     public void Setting_sensitivity_changes_only_the_selected_scheme()
     {
         int changed = BlueStacksProfiles.SetSelectedSensitivity(_file, 0.855);

@@ -11,8 +11,10 @@ public static class SmoothMouseCurve
     public const int PointCount = 5;
     public const int ByteLength = PointCount * 8;
 
-    // Y step is 3.5 in 16.16 fixed point, regardless of display scaling.
-    private const int LinearYStep = 0x38000;
+    // Y step is 56.0 in 16.16 fixed point (bytes 00 00 38 00), as in the MarkC fix, regardless of display scaling.
+    // Versions up to 1.2.1 wrote 0x38000 (3.5), which made the pointer 16x slower whenever something turned
+    // "Enhance pointer precision" on — measured, and the cause of sudden aim speed jumps in emulators.
+    private const int LinearYStep = 0x380000;
 
     public static readonly byte[] WindowsDefaultX = FromPoints(0, 0x6E15, 0x14000, 0x3DC29, 0x280000);
     public static readonly byte[] WindowsDefaultY = FromPoints(0, 0x111FD, 0x42400, 0x12FC00, 0x1BBC000);
@@ -30,7 +32,23 @@ public static class SmoothMouseCurve
         return FromPoints(0, step, step * 2, step * 3, step * 4);
     }
 
-    public static byte[] LinearY() => FromPoints(0, LinearYStep, LinearYStep * 2, LinearYStep * 3, LinearYStep * 4);
+    /// <summary>
+    /// Linear Y curve. <paramref name="gain"/> scales the slope: with acceleration on, Windows multiplies by
+    /// speed/10 instead of the normal speed table, so <see cref="GainForSpeed"/> makes "on" feel exactly like "off".
+    /// </summary>
+    public static byte[] LinearY(double gain = 1.0)
+    {
+        int step = (int)Math.Round(LinearYStep * gain);
+        return FromPoints(0, step, step * 2, step * 3, step * 4);
+    }
+
+    /// <summary>
+    /// Curve gain that makes movement with "Enhance pointer precision" turned on identical to movement with it off,
+    /// at the given pointer speed. Measured on Windows 11: with it on, the pointer moves (speed/10) × curve slope;
+    /// with it off, it moves by the speed table (e.g. 0.5 at 6/20). At 10/20 the gain is 1.
+    /// </summary>
+    public static double GainForSpeed(int speed) =>
+        MouseSettings.SpeedMultiplier(speed) / (Math.Clamp(speed, 1, 20) / 10.0);
 
     public static byte[] FromPoints(params int[] points)
     {

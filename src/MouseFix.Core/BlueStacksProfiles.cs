@@ -27,6 +27,7 @@ public static partial class BlueStacksProfiles
         ["com.dts.freefiremax"] = "Free Fire MAX",
     };
 
+    private const string BuiltInPath = @"Engine\UserData\InputMapper";
     private const string UserFilesPath = @"Engine\UserData\InputMapper\UserFiles";
     public const string BackupSuffix = ".mousefix.bak";
 
@@ -45,7 +46,10 @@ public static partial class BlueStacksProfiles
         {
             foreach (var (package, gameName) in Games)
             {
+                // The user's customised mapping wins; without one, the emulator uses its built-in mapping.
                 var file = Path.Combine(dir, UserFilesPath, package + ".cfg");
+                if (!File.Exists(file))
+                    file = Path.Combine(dir, BuiltInPath, package + ".cfg");
                 if (!File.Exists(file))
                     continue;
                 try

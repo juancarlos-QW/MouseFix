@@ -18,9 +18,41 @@ public class SmoothMouseCurveTests
     }
 
     [Fact]
-    public void LinearY_uses_fixed_steps_of_3_5()
+    public void LinearY_matches_the_markc_fix_byte_for_byte()
     {
-        Assert.Equal(new[] { 0, 0x38000, 0x70000, 0xA8000, 0xE0000 }, SmoothMouseCurve.ToPoints(SmoothMouseCurve.LinearY()));
+        // "SmoothMouseYCurve"=hex:00,00,00,00,00,00,00,00, 00,00,38,00,00,00,00,00, 00,00,70,00,00,00,00,00,
+        //                         00,00,A8,00,00,00,00,00, 00,00,E0,00,00,00,00,00
+        byte[] markC =
+        [
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0x38, 0, 0, 0, 0, 0,
+            0, 0, 0x70, 0, 0, 0, 0, 0,
+            0, 0, 0xA8, 0, 0, 0, 0, 0,
+            0, 0, 0xE0, 0, 0, 0, 0, 0,
+        ];
+
+        Assert.Equal(markC, SmoothMouseCurve.LinearY());
+    }
+
+    // Measured on Windows 11 (see the 1.2.2 fix): with acceleration on the pointer moves speed/10, with it off it
+    // follows the speed table. The gain makes both the same.
+    [Theory]
+    [InlineData(10, 1.0)]
+    [InlineData(6, 0.5 / 0.6)]
+    [InlineData(7, 0.625 / 0.7)]
+    [InlineData(14, 2.0 / 1.4)]
+    [InlineData(20, 3.5 / 2.0)]
+    public void Gain_makes_acceleration_on_feel_like_off(int speed, double expected)
+    {
+        Assert.Equal(expected, SmoothMouseCurve.GainForSpeed(speed), 6);
+    }
+
+    [Fact]
+    public void LinearY_gain_scales_every_point()
+    {
+        var points = SmoothMouseCurve.ToPoints(SmoothMouseCurve.LinearY(0.5));
+
+        Assert.Equal(new[] { 0, 0x1C0000, 0x380000, 0x540000, 0x700000 }, points);
     }
 
     [Fact]
