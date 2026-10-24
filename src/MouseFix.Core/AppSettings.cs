@@ -51,9 +51,9 @@ public sealed class AppSettings
         {
             return File.Exists(path) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new() : new();
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            // A corrupt settings file should not keep the app from starting.
+            // A corrupt or unreadable settings file should not keep the app from starting.
             return new();
         }
     }

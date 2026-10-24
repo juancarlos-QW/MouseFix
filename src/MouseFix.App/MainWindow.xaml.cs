@@ -58,7 +58,14 @@ public partial class MainWindow : FluentWindow
             else
                 _statusTimer.Stop();
         };
-        _history.Changed += (_, _) => RefreshHistory();
+        // Rebuilding the list is only worth it while the History page is on screen; it's rebuilt when opened.
+        _history.Changed += (_, _) =>
+        {
+            if (IsVisible && PageHistory.Visibility == Visibility.Visible)
+                RefreshHistory();
+            else if (IsVisible)
+                RefreshVerification();
+        };
         ShowPage(Page.Home);
         Refresh();
     }
@@ -133,28 +140,69 @@ public partial class MainWindow : FluentWindow
     public string RemoveAccelerationNow()
     {
         _settings.AccelerationEnabled = false;
-        _initializing = true;
-        AccelToggle.IsChecked = false;
-        _initializing = false;
+        SetSilently(() => AccelToggle.IsChecked = false);
         _settings.Save(AppSettings.DefaultPath);
         string? problem = _service.ApplyTarget();
 
         string summary = problem is null ? "Aceleração do Windows removida." : $"Não foi possível remover tudo: {problem}.";
-        var emulator = BlueStacksProfiles.Find(BlueStacksProfiles.DefaultRoot).FirstOrDefault(p => p.AnyAcceleration);
-        if (emulator is not null)
-        {
-            if (BlueStacksProfiles.IsEmulatorRunning)
-            {
-                summary += $" Feche o {emulator.EmulatorName} e clique de novo para desligar a aceleração dele também.";
-            }
-            else
-            {
-                BlueStacksProfiles.DisableMouseAcceleration(emulator.FilePath);
-                summary += $" A aceleração do {emulator.EmulatorName} também foi desligada.";
-            }
-        }
-        Record(ChangeSource.User, summary, problem);
+        var (emulatorSummary, emulatorProblem) = DisableEmulatorAcceleration();
+        if (emulatorSummary is not null)
+            summary += " " + emulatorSummary;
+        Record(ChangeSource.User, summary, problem ?? emulatorProblem);
         return summary;
+    }
+
+    /// <summary>
+    /// Turns off "Mouse acceleration" in every Free Fire mapping of every supported emulator that has it on.
+    /// Returns a sentence for the user (null when there was nothing to do) and what failed, if anything.
+    /// Never throws, so a locked emulator file can't hide that the Windows part already worked.
+    /// </summary>
+    private (string? Summary, string? Problem) DisableEmulatorAcceleration()
+    {
+        try
+        {
+            var withAcceleration = BlueStacksProfiles.Find(BlueStacksProfiles.DefaultRoot).Where(p => p.AnyAcceleration).ToList();
+            if (withAcceleration.Count == 0)
+                return (null, null);
+
+            string names = string.Join(", ", withAcceleration.Select(p => $"{p.EmulatorName} ({p.GameName})").Distinct());
+            if (BlueStacksProfiles.IsEmulatorRunning)
+                return ($"Feche o emulador e clique de novo para desligar a aceleração de: {names}.",
+                        "o emulador estava aberto");
+
+            var stillOn = new List<string>();
+            foreach (var profile in withAcceleration)
+            {
+                // Edit the user's copy: the emulator prefers it, and updates can replace its built-in mappings.
+                string file = BlueStacksProfiles.EnsureUserCopy(profile.FilePath);
+                BlueStacksProfiles.DisableMouseAcceleration(file);
+                if (BlueStacksProfiles.Load(profile.EmulatorName, profile.GameName, file).AnyAcceleration)
+                    stillOn.Add($"{profile.EmulatorName} ({profile.GameName})");
+            }
+            return stillOn.Count == 0
+                ? ($"A aceleração do emulador também foi desligada ({names}).", null)
+                : ($"A aceleração continua ligada em: {string.Join(", ", stillOn)}.", "o arquivo do emulador não mudou");
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            Log.Error("Não foi possível alterar o arquivo do emulador", ex);
+            return ($"Não foi possível alterar o arquivo do emulador ({ex.Message}).", "arquivo do emulador bloqueado");
+        }
+    }
+
+    // Changes a control from code without its change handler treating it as a user action.
+    private void SetSilently(Action change)
+    {
+        bool wasInitializing = _initializing;
+        _initializing = true;
+        try
+        {
+            change();
+        }
+        finally
+        {
+            _initializing = wasInitializing;
+        }
     }
 
     private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -214,6 +262,13 @@ public partial class MainWindow : FluentWindow
     });
 
     // ---------- Refresh ----------
+
+    /// <summary>Updates only what Windows has right now (cheap; safe to call often).</summary>
+    public void RefreshQuick()
+    {
+        if (IsVisible)
+            RefreshStatus();
+    }
 
     public void Refresh()
     {
@@ -337,6 +392,7 @@ public partial class MainWindow : FluentWindow
                 ChangeSource.User => (SymbolRegular.Person24, "Você"),
                 ChangeSource.Profile => (SymbolRegular.AppsList24, entry.Program is null ? "Perfil" : $"Perfil {entry.Program}"),
                 ChangeSource.OtherProgram => (SymbolRegular.Warning24, $"Outro programa: {entry.Program ?? "desconhecido"}"),
+                ChangeSource.MouseFix => (SymbolRegular.ShieldCheckmark24, "MouseFix"),
                 _ => (SymbolRegular.ArrowUndo24, "Restaurar"),
             };
             var icon = new SymbolIcon(sourceIcon) { FontSize = 20, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 12, 0) };
@@ -553,8 +609,9 @@ public partial class MainWindow : FluentWindow
 
         _settings.EmulatorSensitivityBeforeAdjust ??= aim.Sensitivity;
         _settings.Save(AppSettings.DefaultPath);
-        BlueStacksProfiles.SetSelectedSensitivity(_emulatorProfile.FilePath, suggested);
-        var after = BlueStacksProfiles.Load(_emulatorProfile.EmulatorName, _emulatorProfile.GameName, _emulatorProfile.FilePath).SelectedAim;
+        string file = BlueStacksProfiles.EnsureUserCopy(_emulatorProfile.FilePath);
+        BlueStacksProfiles.SetSelectedSensitivity(file, suggested);
+        var after = BlueStacksProfiles.Load(_emulatorProfile.EmulatorName, _emulatorProfile.GameName, file).SelectedAim;
         Record(ChangeSource.User, $"Sensibilidade do emulador: {aim.Sensitivity:0.##} → {suggested:0.##}",
             after is not null && Math.Abs(after.Sensitivity - suggested) < 0.005 ? null : "o arquivo do emulador não ficou com o valor novo");
     });
@@ -577,12 +634,11 @@ public partial class MainWindow : FluentWindow
 
     private void EmulatorFixButton_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
-        if (_emulatorProfile is null || !EnsureEmulatorClosed())
+        if (!EnsureEmulatorClosed())
             return;
-        BlueStacksProfiles.DisableMouseAcceleration(_emulatorProfile.FilePath);
-        bool off = !BlueStacksProfiles.Load(_emulatorProfile.EmulatorName, _emulatorProfile.GameName, _emulatorProfile.FilePath).AnyAcceleration;
-        Record(ChangeSource.User, $"Aceleração do {_emulatorProfile.EmulatorName} desligada",
-            off ? null : "a aceleração do emulador continua ligada no arquivo");
+        var (summary, problem) = DisableEmulatorAcceleration();
+        if (summary is not null)
+            Record(ChangeSource.User, summary, problem);
     });
 
     // ---------- Tests and settings ----------

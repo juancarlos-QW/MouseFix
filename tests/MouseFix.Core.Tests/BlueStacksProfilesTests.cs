@@ -100,6 +100,28 @@ public sealed class BlueStacksProfilesTests : IDisposable
     }
 
     [Fact]
+    public void Built_in_mapping_is_copied_to_user_files_before_editing()
+    {
+        File.Delete(_file);
+        var builtIn = Path.Combine(_root, "BlueStacks_msi5", "Engine", "UserData", "InputMapper", "com.dts.freefireth.cfg");
+        File.WriteAllText(builtIn, SampleCfg);
+
+        var editable = BlueStacksProfiles.EnsureUserCopy(builtIn);
+        BlueStacksProfiles.DisableMouseAcceleration(editable);
+
+        Assert.Equal(_file, editable);
+        Assert.Equal(SampleCfg, File.ReadAllText(builtIn));
+        Assert.False(BlueStacksProfiles.Load("x", "y", editable).AnyAcceleration);
+        Assert.Equal(_file, Assert.Single(BlueStacksProfiles.Find(_root)).FilePath);
+    }
+
+    [Fact]
+    public void A_user_file_is_edited_in_place()
+    {
+        Assert.Equal(_file, BlueStacksProfiles.EnsureUserCopy(_file));
+    }
+
+    [Fact]
     public void Customised_mapping_wins_over_the_built_in_one()
     {
         var builtIn = Path.Combine(_root, "BlueStacks_msi5", "Engine", "UserData", "InputMapper", "com.dts.freefireth.cfg");

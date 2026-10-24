@@ -23,6 +23,7 @@ public partial class App : Application
     private MouseFixService _service = null!;
     private ProtectionMonitor _monitor = null!;
     private AppSettings _settings = null!;
+    private ChangeHistory? _history;
     private MainWindow _window = null!;
     private readonly DispatcherTimer _updateTimer = new() { Interval = TimeSpan.FromSeconds(20) };
     private TrayIcon? _tray;
@@ -76,12 +77,21 @@ public partial class App : Application
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, WindowBackdropType.None, updateAccent: false);
         ApplicationAccentColorManager.Apply((Color)Resources["MfAccentColor"], ApplicationTheme.Dark);
 
+        bool firstRun = !File.Exists(AppSettings.DefaultPath);
         var settings = _settings = AppSettings.Load(AppSettings.DefaultPath);
         ProtectionMonitor? monitor = null;
+        var store = new WindowsMouseSettingsStore();
+        // A new user starts from the speed Windows already has, so "Remover aceleração" never changes how fast the
+        // pointer moves without asking. (10/20 is one click away with "Voltar para 1:1".)
+        if (firstRun)
+        {
+            settings.PointerSpeed = Math.Clamp(store.Read().Speed, 1, 20);
+            settings.Save(AppSettings.DefaultPath);
+        }
         // The speed in effect: the running program's profile, otherwise the default chosen in the window.
-        _service = new MouseFixService(new WindowsMouseSettingsStore(), new BackupStore(BackupStore.DefaultPath),
+        _service = new MouseFixService(store, new BackupStore(BackupStore.DefaultPath),
             () => new TargetOptions(monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed, settings.AccelerationEnabled, settings.ScrollLines));
-        var history = new ChangeHistory(ChangeHistory.DefaultPath);
+        var history = _history = new ChangeHistory(ChangeHistory.DefaultPath);
         _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles, history);
         monitor.Reapplied += OnReapplied;
         monitor.ProfileChanged += OnProfileChanged;
@@ -154,6 +164,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _history?.Flush();
         _tray?.Dispose();
         try
         {
@@ -197,7 +208,9 @@ public partial class App : Application
 
     private void OnReapplied(object? sender, EventArgs e)
     {
-        _window.Refresh();
+        // Only the status can have changed; a full refresh (emulator files, process list) is too heavy to repeat
+        // while some program keeps fighting MouseFix.
+        _window.RefreshQuick();
 
         // Some games toggle the setting repeatedly; don't flood the user with notifications.
         if (DateTime.Now - _lastReapplyNotice < NotifyCooldown)

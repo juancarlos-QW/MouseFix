@@ -88,6 +88,26 @@ public static partial class BlueStacksProfiles
     }
 
     /// <summary>
+    /// The file to edit for a mapping: the user's copy in UserFiles. If the mapping is the emulator's built-in one,
+    /// it is copied to UserFiles first — the emulator prefers that copy, and updates to the built-in mappings
+    /// would otherwise silently undo MouseFix's change.
+    /// </summary>
+    public static string EnsureUserCopy(string file)
+    {
+        var dir = Path.GetDirectoryName(file)!;
+        if (Path.GetFileName(dir).Equals("UserFiles", StringComparison.OrdinalIgnoreCase))
+            return file;
+
+        var userFile = Path.Combine(dir, "UserFiles", Path.GetFileName(file));
+        if (!File.Exists(userFile))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(userFile)!);
+            File.Copy(file, userFile);
+        }
+        return userFile;
+    }
+
+    /// <summary>
     /// Turns off "Mouse acceleration" in every aim control. Edits only those values in the text,
     /// so the rest of the file stays byte-for-byte identical. Keeps a backup of the original file.
     /// Returns how many controls were changed.

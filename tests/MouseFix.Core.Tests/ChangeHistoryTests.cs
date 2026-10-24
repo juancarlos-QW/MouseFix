@@ -15,6 +15,7 @@ public sealed class ChangeHistoryTests : IDisposable
         var history = new ChangeHistory(_path);
         history.Add(new ChangeEntry(T0, ChangeSource.User, "Aceleração removida", true));
         history.Add(new ChangeEntry(T0.AddMinutes(5), ChangeSource.OtherProgram, "aceleração ligada", true, Program: "HD-Player"));
+        history.Flush();
 
         var reloaded = new ChangeHistory(_path);
 
@@ -44,6 +45,19 @@ public sealed class ChangeHistoryTests : IDisposable
 
         Assert.Equal(ChangeHistory.MaxEntries, history.Entries.Count);
         Assert.Equal($"mudança {ChangeHistory.MaxEntries + 19}", history.Entries[0].Description);
+    }
+
+    [Fact]
+    public void Rapid_changes_are_written_at_most_every_couple_of_seconds_and_flushed_on_demand()
+    {
+        var history = new ChangeHistory(_path);
+        history.Add(new ChangeEntry(T0, ChangeSource.User, "primeira", true));
+        history.Add(new ChangeEntry(T0.AddMinutes(2), ChangeSource.User, "segunda", true));
+
+        Assert.Single(new ChangeHistory(_path).Entries);
+
+        history.Flush();
+        Assert.Equal(2, new ChangeHistory(_path).Entries.Count);
     }
 
     [Fact]

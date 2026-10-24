@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -50,7 +50,7 @@ public sealed class ProtectionMonitor
         _profiles = profiles;
         _history = history;
         _hook = WndProc;
-        _timer.Tick += (_, _) => Check();
+        _timer.Tick += (_, _) => OnTick();
     }
 
     public event EventHandler? Reapplied;
@@ -76,73 +76,33 @@ public sealed class ProtectionMonitor
         var hwnd = new WindowInteropHelper(window).EnsureHandle();
         HwndSource.FromHwnd(hwnd).AddHook(_hook);
         _timer.Start();
-        Check();
+        Check(checkProfiles: true);
     }
 
-    /// <summary>Runs a check now, e.g. right after the profile list changed.</summary>
-    public void CheckNow() => Check();
+    /// <summary>Runs a full check now, profiles included, e.g. right after the profile list changed.</summary>
+    public void CheckNow() => Check(checkProfiles: true);
+
+    private void OnTick() => Check(checkProfiles: _tick++ % ProfileCheckEveryTicks == 0);
 
     private nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
     {
         if (msg == WM_SETTINGCHANGE && wParam is SPI_SETMOUSE or SPI_SETMOUSESPEED)
         {
             // Defer so we don't write settings while Windows is still broadcasting the change.
-            Dispatcher.CurrentDispatcher.BeginInvoke(Check);
+            Dispatcher.CurrentDispatcher.BeginInvoke(() => Check(checkProfiles: false));
         }
         return 0;
     }
 
-    private void Check()
+    private void Check(bool checkProfiles)
     {
         if (Paused)
             return;
 
         try
         {
-            if (_tick++ % ProfileCheckEveryTicks == 0)
-            {
-                var active = SpeedProfiles.FindActive(_profiles(), IsRunning);
-                if (active != ActiveProfile)
-                {
-                    ActiveProfile = active;
-                    // A profile switch is something the user asked for, so apply it even with automatic protection off.
-                    bool applied = _service.EnsureFixed();
-                    string description = active is null
-                        ? $"Voltou à velocidade padrão {_service.TargetSpeed}/20"
-                        : $"Perfil \"{active.DisplayName}\": velocidade {active.Speed}/20";
-                    Log.Info(description);
-                    if (applied)
-                    {
-                        string? problem = _service.VerifyTarget();
-                        _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.Profile, description, problem is null, problem,
-                            active?.DisplayName));
-                    }
-                    ProfileChanged?.Invoke(this, EventArgs.Empty);
-                    return;
-                }
-            }
-
-            if (!_isEnabled() || !_service.HasBackup)
-                return;
-
-            var current = _service.Current;
-            var expected = _service.BuildTarget();
-            if (current.Equals(expected))
-                return;
-
-            // Something outside MouseFix changed the mouse: note what and who, then put the user's settings back.
-            string what = SettingsChange.Describe(current, expected);
-            string who = ForegroundProcessName();
-            if (_service.EnsureFixed())
-            {
-                LastExternalChange = $"{what} (em primeiro plano: {who})";
-                Log.Info($"Mudança externa no mouse: {LastExternalChange}. Configuração do MouseFix reaplicada.");
-                string? problem = _service.VerifyTarget();
-                _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.OtherProgram, $"Outro programa mudou: {what}. Desfeito.",
-                    problem is null, problem, who));
-                Reapplied?.Invoke(this, EventArgs.Empty);
-                TrackFight(who);
-            }
+            CheckCore(checkProfiles);
+            _lastError = null;
         }
         catch (Exception ex)
         {
@@ -151,9 +111,66 @@ public sealed class ProtectionMonitor
             if (ex.Message != _lastError)
                 Log.Error("Falha ao verificar/reaplicar a configuração", ex);
             _lastError = ex.Message;
+        }
+    }
+
+    private void CheckCore(bool checkProfiles)
+    {
+        if (checkProfiles)
+        {
+            var active = SpeedProfiles.FindActive(_profiles(), IsRunning);
+            if (active != ActiveProfile)
+            {
+                ActiveProfile = active;
+                // A profile switch is something the user asked for, so apply it even with automatic protection off.
+                bool applied = _service.EnsureFixed();
+                string description = active is null
+                    ? $"Voltou à velocidade padrão {_service.TargetSpeed}/20"
+                    : $"Perfil \"{active.DisplayName}\": velocidade {active.Speed}/20";
+                Log.Info(description);
+                if (applied)
+                {
+                    string? profileProblem = _service.VerifyTarget();
+                    _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.Profile, description, profileProblem is null,
+                        profileProblem, active?.DisplayName));
+                }
+                ProfileChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+        }
+
+        if (!_isEnabled() || !_service.HasBackup)
+            return;
+
+        // One read of Windows per tick; the target is built from it.
+        var current = _service.Current;
+        var expected = _service.BuildTarget(current);
+        if (current.Equals(expected))
+            return;
+
+        if (SettingsChange.OnlyCurvesDiffer(current, expected))
+        {
+            // Programs change acceleration or speed, not the protection curves: this is MouseFix's own update
+            // (e.g. replacing curves written by an older version), so don't blame anyone or notify.
+            _service.Apply(expected);
+            string? curvesProblem = _service.VerifyTarget();
+            Log.Info("Curvas de proteção atualizadas pelo MouseFix.");
+            _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix,
+                "Curvas de proteção atualizadas (valem depois do próximo login)", curvesProblem is null, curvesProblem));
             return;
         }
-        _lastError = null;
+
+        // Something outside MouseFix changed the mouse: note what and who, then put the user's settings back.
+        string what = SettingsChange.Describe(current, expected);
+        string who = ForegroundProcessName();
+        _service.Apply(expected);
+        LastExternalChange = $"{what} (em primeiro plano: {who})";
+        Log.Info($"Mudança externa no mouse: {LastExternalChange}. Configuração do MouseFix reaplicada.");
+        string? problem = _service.VerifyTarget();
+        _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.OtherProgram, $"Outro programa mudou: {what}. Desfeito.",
+            problem is null, problem, who));
+        Reapplied?.Invoke(this, EventArgs.Empty);
+        TrackFight(who);
     }
 
     private void TrackFight(string who)

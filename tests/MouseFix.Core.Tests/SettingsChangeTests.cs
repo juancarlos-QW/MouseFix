@@ -25,6 +25,16 @@ public class SettingsChangeTests
     }
 
     [Fact]
+    public void Curves_only_differences_are_recognised_as_coming_from_mousefix()
+    {
+        var oldCurves = Expected with { SmoothMouseYCurve = SmoothMouseCurve.FromPoints(0, 0x38000, 0x70000, 0xA8000, 0xE0000) };
+
+        Assert.True(SettingsChange.OnlyCurvesDiffer(oldCurves, Expected));
+        Assert.False(SettingsChange.OnlyCurvesDiffer(oldCurves with { Acceleration = 1 }, Expected));
+        Assert.False(SettingsChange.OnlyCurvesDiffer(Expected, Expected));
+    }
+
+    [Fact]
     public void Same_settings_mean_nothing_changed()
     {
         Assert.Equal("nada", SettingsChange.Describe(Expected, Expected));

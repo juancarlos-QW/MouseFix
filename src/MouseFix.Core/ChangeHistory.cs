@@ -14,6 +14,8 @@ public enum ChangeSource
     OtherProgram,
     /// <summary>Restoring the settings from before MouseFix.</summary>
     Restore,
+    /// <summary>MouseFix itself, e.g. replacing protection curves written by an older version.</summary>
+    MouseFix,
 }
 
 /// <param name="Time">When it happened (the latest time, for grouped entries).</param>
@@ -47,8 +49,13 @@ public sealed class ChangeHistory
         Converters = { new JsonStringEnumConverter() },
     };
 
+    // If a program keeps fighting MouseFix, entries arrive many times a second; write the file at most this often.
+    private static readonly TimeSpan MinSaveInterval = TimeSpan.FromSeconds(2);
+
     private readonly string _path;
     private readonly List<ChangeEntry> _entries;
+    private DateTime _lastSave = DateTime.MinValue;
+    private bool _dirty;
 
     public ChangeHistory(string path)
     {
@@ -78,19 +85,28 @@ public sealed class ChangeHistory
             if (_entries.Count > MaxEntries)
                 _entries.RemoveRange(MaxEntries, _entries.Count - MaxEntries);
         }
-        Save();
+
+        _dirty = true;
+        if (DateTime.Now - _lastSave >= MinSaveInterval)
+            Flush();
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Clear()
     {
         _entries.Clear();
-        Save();
+        _dirty = true;
+        Flush();
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Save()
+    /// <summary>Writes pending entries to disk (also call it when the app exits).</summary>
+    public void Flush()
     {
+        if (!_dirty)
+            return;
+        _dirty = false;
+        _lastSave = DateTime.Now;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
@@ -111,8 +127,9 @@ public sealed class ChangeHistory
         {
             return File.Exists(path) ? JsonSerializer.Deserialize<List<ChangeEntry>>(File.ReadAllText(path), Json) ?? [] : [];
         }
-        catch (Exception ex) when (ex is JsonException or IOException)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
+            // Unreadable history (corrupt, or blocked by OneDrive/antivirus) must never stop the app from starting.
             return [];
         }
     }

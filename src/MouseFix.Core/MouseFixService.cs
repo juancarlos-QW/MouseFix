@@ -30,12 +30,13 @@ public sealed class MouseFixService
     /// scale every movement by the same factor. With acceleration on, Windows' own defaults are used,
     /// including its curves (the linear protection curves would cancel the acceleration out).
     /// </summary>
-    public MouseSettings BuildTarget()
+    /// <param name="current">Windows' current settings if already read, to avoid reading them again.</param>
+    public MouseSettings BuildTarget(MouseSettings? current = null)
     {
         var options = _options();
         int? scroll = options.ScrollLines is int lines
             ? Math.Clamp(lines, TargetOptions.MinScrollLines, TargetOptions.MaxScrollLines)
-            : _store.Read().ScrollLines;
+            : (current ?? _store.Read()).ScrollLines;
 
         return options.AccelerationEnabled
             ? new MouseSettings(1, 6, 10, TargetSpeed, SmoothMouseCurve.WindowsDefaultX, SmoothMouseCurve.WindowsDefaultY, scroll)
@@ -66,8 +67,8 @@ public sealed class MouseFixService
     public string? VerifyTarget()
     {
         var current = _store.Read();
-        var target = BuildTarget();
-        return current.Equals(target) ? null : SettingsChange.Describe(current, target);
+        var target = BuildTarget(current);
+        return current.Equals(target) ? null : SettingsChange.Describe(current, target, "escolhida");
     }
 
     /// <summary>
@@ -79,8 +80,9 @@ public sealed class MouseFixService
         if (!_backup.Exists)
             return false;
 
-        var target = BuildTarget();
-        if (_store.Read().Equals(target))
+        var current = _store.Read();
+        var target = BuildTarget(current);
+        if (current.Equals(target))
             return false;
 
         _store.Write(target);
@@ -89,7 +91,8 @@ public sealed class MouseFixService
 
     /// <summary>
     /// Restores the backed-up settings (or Windows defaults when there is no backup) and reads them back.
-    /// Returns null when restored; otherwise what didn't take, and the backup is kept so the user can try again.
+    /// Returns null when restored; otherwise what didn't take. Either way MouseFix stops managing the mouse afterwards
+    /// (the backup is removed), so the protection never undoes a restore — even a partly failed one.
     /// </summary>
     public string? Restore()
     {
@@ -102,14 +105,11 @@ public sealed class MouseFixService
             SmoothMouseCurve.WindowsDefaultY);
 
         _store.Write(original);
+        _backup.Delete();
 
         var current = _store.Read();
         // A backup without scroll lines (made by older versions) doesn't touch scrolling, so don't check it.
         var expected = original.ScrollLines is null ? original with { ScrollLines = current.ScrollLines } : original;
-        if (!current.Equals(expected))
-            return SettingsChange.Describe(current, expected);
-
-        _backup.Delete();
-        return null;
+        return current.Equals(expected) ? null : SettingsChange.Describe(current, expected, "original");
     }
 }

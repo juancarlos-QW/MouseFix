@@ -218,17 +218,27 @@ public sealed class MouseFixServiceTests : IDisposable
     }
 
     [Fact]
-    public void A_failed_restore_keeps_the_backup_so_the_user_can_try_again()
+    public void A_partly_failed_restore_reports_it_and_the_protection_does_not_undo_it()
     {
         _service.ApplyTarget();
         _store.IgnoreSpeedWrites = true;
 
-        Assert.NotNull(_service.Restore());
-        Assert.True(_service.HasBackup);
+        var problem = _service.Restore();
 
-        _store.IgnoreSpeedWrites = false;
-        Assert.Null(_service.Restore());
+        Assert.Contains("original 14/20", problem);
         Assert.False(_service.HasBackup);
+        // With no backup the protection stays out of it, so the restored values are left alone.
+        _store.IgnoreSpeedWrites = false;
+        Assert.False(_service.EnsureFixed());
+        Assert.Equal(1, _store.Settings.Acceleration);
+    }
+
+    [Fact]
+    public void Verification_failures_name_the_chosen_value()
+    {
+        _store.IgnoreSpeedWrites = true;
+
+        Assert.Contains("velocidade 14/20 (escolhida 10/20)", _service.ApplyTarget());
     }
 
     private sealed class FakeStore : IMouseSettingsStore
