@@ -22,6 +22,7 @@ public partial class MainWindow : FluentWindow
     private readonly AppSettings _settings;
     private readonly ProtectionMonitor _monitor;
     private readonly ChangeHistory _history;
+    private readonly GameModeService _gameMode;
     private EmulatorGameProfile? _emulatorProfile;
     // Controls raise change events while XAML loads and when set from code; ignore those.
     private bool _initializing = true;
@@ -31,12 +32,14 @@ public partial class MainWindow : FluentWindow
     // Keeps the status honest while the window is open, even if nothing in MouseFix triggered a refresh.
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
-    public MainWindow(MouseFixService service, AppSettings settings, ProtectionMonitor monitor, ChangeHistory history)
+    public MainWindow(MouseFixService service, AppSettings settings, ProtectionMonitor monitor, ChangeHistory history,
+        GameModeService gameMode)
     {
         _service = service;
         _settings = settings;
         _monitor = monitor;
         _history = history;
+        _gameMode = gameMode;
 
         InitializeComponent();
         FitToWorkArea();
@@ -46,6 +49,7 @@ public partial class MainWindow : FluentWindow
         UpdateCheckToggle.IsChecked = settings.CheckForUpdates;
         SpeedSlider.Value = settings.PointerSpeed;
         AccelToggle.IsChecked = settings.AccelerationEnabled;
+        GameModeAutoCheck.IsChecked = settings.GameModeWithEmulator;
         AboutText.Text = $"MouseFix {CurrentVersion.ToString(3)}";
         _initializing = false;
 
@@ -324,6 +328,8 @@ public partial class MainWindow : FluentWindow
             RefreshSpeedText(_settings.PointerSpeed);
         RefreshVerification();
 
+        RefreshGameMode();
+
         AccelValue.Text = current.IsAccelerationEnabled ? "Ligada" : "Desligada";
         SpeedValue.Text = SpeedLabel(current.Speed);
         ScrollCurrentValue.Text = current.ScrollLines is int l ? LinesLabel(l) : "—";
@@ -366,6 +372,53 @@ public partial class MainWindow : FluentWindow
         VerifyText.Text = text;
     }
 
+    // ---------- Game mode ----------
+
+    private void RefreshGameMode()
+    {
+        bool active;
+        string planName;
+        try
+        {
+            active = _gameMode.IsActive;
+            planName = _gameMode.ActivePlanName;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            GameModeText.Text = "Não foi possível ler o plano de energia do Windows.";
+            return;
+        }
+
+        GameModeChipText.Text = active ? "ATIVO" : "DESLIGADO";
+        GameModeChipText.SetResourceReference(TextBlock.ForegroundProperty, active ? "MfSuccess" : "MfTextMuted");
+        GameModeChip.Background = (Brush)new BrushConverter().ConvertFromString(active ? "#123526" : "#1A2434")!;
+        GameModeIcon.SetResourceReference(ForegroundProperty, active ? "MfAccent" : "MfTextMuted");
+
+        GameModeText.Text = active
+            ? $"Plano de energia \"{GameModeService.PlanName}\": processador sempre em 100%, sem economia de energia." +
+              (_gameMode.ActivatedAutomatically ? " Ligado porque o emulador está aberto; volta sozinho quando fechar." : "")
+            : $"Plano de energia atual: {planName}. O modo jogo deixa o PC no desempenho máximo enquanto você joga.";
+        GameModeButton.Content = active ? "Voltar ao plano normal" : "Ativar modo jogo";
+        GameModeButton.Appearance = active ? ControlAppearance.Secondary : ControlAppearance.Primary;
+    }
+
+    private void GameModeButton_Click(object sender, RoutedEventArgs e) => Run(() => _monitor.ToggleGameMode());
+
+    private void GameModeAutoCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        Run(() =>
+        {
+            _settings.GameModeWithEmulator = GameModeAutoCheck.IsChecked == true;
+            _settings.Save(AppSettings.DefaultPath);
+            Log.Info($"Modo jogo automático com emulador: {(_settings.GameModeWithEmulator ? "ligado" : "desligado")}");
+            // Turning it on with the emulator already open should take effect now, not on the next launch.
+            if (_settings.GameModeWithEmulator)
+                _monitor.RecheckEmulator();
+        });
+    }
+
     private static string SpeedLabel(int speed) => speed == MouseSettings.OneToOneSpeed
         ? $"{speed}/20 (1:1)"
         : $"{speed}/20 ({MouseSettings.SpeedMultiplier(speed):0.###}x)";
@@ -393,6 +446,7 @@ public partial class MainWindow : FluentWindow
                 ChangeSource.Profile => (SymbolRegular.AppsList24, entry.Program is null ? "Perfil" : $"Perfil {entry.Program}"),
                 ChangeSource.OtherProgram => (SymbolRegular.Warning24, $"Outro programa: {entry.Program ?? "desconhecido"}"),
                 ChangeSource.MouseFix => (SymbolRegular.ShieldCheckmark24, "MouseFix"),
+                ChangeSource.GameMode => (SymbolRegular.Flash24, "Modo jogo"),
                 _ => (SymbolRegular.ArrowUndo24, "Restaurar"),
             };
             var icon = new SymbolIcon(sourceIcon) { FontSize = 20, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 12, 0) };

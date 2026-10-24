@@ -28,6 +28,13 @@ Funciona no Windows 10 e 11 (64 bits).
 - Em Configurações: velocidade de rolagem, interruptor de aceleração (se você quiser mesmo ligá-la), perfis, emulador, testes e ajuda.
 - Grava curvas lineares de proteção (o "MarkC fix"): se algum programa ligar a aceleração, o movimento continua igual. Valem depois de sair da conta do Windows e entrar de novo uma vez.
 
+**Modo jogo (plano de energia)**
+- Um botão liga o plano de energia **"MouseFix Jogo"**, feito a partir do "Alto desempenho" do Windows: processador sempre em 100%, sem estacionamento de núcleos, turbo agressivo, sem economia de energia no USB e no PCIe, e o PC nunca dorme.
+- **Liga sozinho quando um emulador abre** (MSI App Player, BlueStacks, LDPlayer, MuMu, GameLoop) e volta ao seu plano anterior quando ele fecha. Se você trocar de plano no meio, o MouseFix respeita.
+- Em notebooks com duas placas de vídeo, marca o emulador para usar a **placa dedicada** (se você ainda não escolheu outra coisa).
+- Não precisa de administrador. Ao desinstalar o MouseFix, o plano "MouseFix Jogo" é apagado.
+- Seja realista: em PC de mesa o ganho costuma ser pequeno (mais estabilidade de FPS). Em notebook na tomada, pode ser maior. O PC esquenta e gasta mais energia enquanto o modo jogo está ligado.
+
 **Em segundo plano (na bandeja)**
 - **Proteção automática:** se algum programa mudar a aceleração ou a velocidade, o MouseFix desfaz em até 0,1 segundo e anota no histórico quem foi.
 - **Perfis por programa:** escolha uma velocidade para um programa (ex.: o emulador). Quando ele abre, o MouseFix troca a velocidade sozinho; quando fecha, volta ao padrão. A aceleração fica sempre desligada.

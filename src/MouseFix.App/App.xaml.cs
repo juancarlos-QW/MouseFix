@@ -15,6 +15,7 @@ public partial class App : Application
 {
     private const string InstanceName = "MouseFix.SingleInstance";
     private const string ExitArgument = "--exit";
+    private const string RemovePowerPlanArgument = "--remove-power-plan";
     private static readonly TimeSpan NotifyCooldown = TimeSpan.FromMinutes(5);
 
     private Mutex? _instanceMutex;
@@ -24,6 +25,7 @@ public partial class App : Application
     private ProtectionMonitor _monitor = null!;
     private AppSettings _settings = null!;
     private ChangeHistory? _history;
+    private GameModeService? _gameMode;
     private MainWindow _window = null!;
     private readonly DispatcherTimer _updateTimer = new() { Interval = TimeSpan.FromSeconds(20) };
     private TrayIcon? _tray;
@@ -33,6 +35,22 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        if (e.Args.Contains(RemovePowerPlanArgument))
+        {
+            // Used by the uninstaller (after --exit): leave game mode and delete the "MouseFix Jogo" plan.
+            try
+            {
+                var cleanupSettings = AppSettings.Load(AppSettings.DefaultPath);
+                new GameModeService(new WindowsPowerPlans(), cleanupSettings, () => cleanupSettings.Save(AppSettings.DefaultPath)).RemovePlan();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Não foi possível remover o plano de energia ao desinstalar", ex);
+            }
+            Shutdown();
+            return;
+        }
 
         _instanceMutex = new Mutex(initiallyOwned: true, InstanceName, out bool isFirstInstance);
 
@@ -92,15 +110,24 @@ public partial class App : Application
         _service = new MouseFixService(store, new BackupStore(BackupStore.DefaultPath),
             () => new TargetOptions(monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed, settings.AccelerationEnabled, settings.ScrollLines));
         var history = _history = new ChangeHistory(ChangeHistory.DefaultPath);
-        _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles, history);
+        var gameMode = _gameMode = new GameModeService(new WindowsPowerPlans(), settings, () => settings.Save(AppSettings.DefaultPath));
+        _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles, history,
+            gameMode, () => settings.GameModeWithEmulator);
         monitor.Reapplied += OnReapplied;
         monitor.ProfileChanged += OnProfileChanged;
+        monitor.GameModeChanged += (_, _) =>
+        {
+            _window.Refresh();
+            _tray?.Notify("Modo jogo", gameMode.IsActive
+                ? $"Plano de energia \"{GameModeService.PlanName}\" ativado: desempenho máximo."
+                : $"Plano de energia de volta para \"{gameMode.ActivePlanName}\".");
+        };
         monitor.FightDetected += (_, program) => _tray?.Notify(
             "Um programa está mudando o seu mouse",
             $"\"{program}\" mudou a aceleração ou a velocidade várias vezes no último minuto. O MouseFix desfez todas, " +
             "mas se a mira oscilar, procure a opção de mouse nesse programa.");
 
-        _window = new MainWindow(_service, settings, monitor, history);
+        _window = new MainWindow(_service, settings, monitor, history, gameMode);
         _window.HiddenToTray += OnHiddenToTray;
         _window.CheckForUpdatesRequested += (_, _) => CheckForUpdates(force: true);
 
@@ -164,6 +191,16 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Game mode turned on for an emulator shouldn't outlive MouseFix (it would never be turned back off).
+        try
+        {
+            if (_gameMode?.ActivatedAutomatically == true)
+                _gameMode.Deactivate();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Não foi possível desligar o modo jogo ao sair", ex);
+        }
         _history?.Flush();
         _tray?.Dispose();
         try

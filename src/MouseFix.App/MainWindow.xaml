@@ -139,6 +139,29 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Game mode: the "MouseFix Jogo" power plan, by button or automatically with an emulator -->
+                    <Border Style="{StaticResource MfPanelStyle}" Padding="22,18" Margin="0,16,0,0">
+                        <StackPanel>
+                            <Grid>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon x:Name="GameModeIcon" Symbol="Flash24" FontSize="22" Filled="True" VerticalAlignment="Center" />
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Modo jogo" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <Border x:Name="GameModeChip" HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="10" Padding="10,3">
+                                    <TextBlock x:Name="GameModeChipText" FontSize="12" FontWeight="SemiBold" />
+                                </Border>
+                            </Grid>
+                            <TextBlock x:Name="GameModeText" Style="{StaticResource Muted}" FontSize="13" Margin="0,8,0,0" />
+                            <ui:Button x:Name="GameModeButton" Margin="0,12,0,0" HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center" Height="40" Click="GameModeButton_Click" />
+                            <CheckBox x:Name="GameModeAutoCheck" Margin="0,12,0,0"
+                                      Checked="GameModeAutoCheck_Changed" Unchecked="GameModeAutoCheck_Changed">
+                                <TextBlock Foreground="White" TextWrapping="Wrap"
+                                           Text="Ativar sozinho quando um emulador abrir (e voltar ao plano normal quando fechar)" />
+                            </CheckBox>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Result of the last apply, checked by reading Windows back -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0">
                         <ui:SymbolIcon x:Name="VerifyIcon" FontSize="20" VerticalAlignment="Top" />

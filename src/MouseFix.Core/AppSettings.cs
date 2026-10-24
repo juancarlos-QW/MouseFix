@@ -20,6 +20,18 @@ public sealed class AppSettings
     /// <summary>Per-program speeds; the first running one wins, otherwise <see cref="PointerSpeed"/> is used.</summary>
     public List<SpeedProfile> Profiles { get; set; } = [];
 
+    /// <summary>Turn game mode (the "MouseFix Jogo" power plan) on while an emulator runs, and back off when it closes.</summary>
+    public bool GameModeWithEmulator { get; set; } = true;
+
+    /// <summary>Id of the "MouseFix Jogo" power plan once created.</summary>
+    public string? GamePowerPlan { get; set; }
+
+    /// <summary>The power plan that was active before game mode, to go back to.</summary>
+    public string? PowerPlanBeforeGame { get; set; }
+
+    /// <summary>True when game mode is on because an emulator opened (it turns off again when the emulator closes).</summary>
+    public bool GameModeAutomatic { get; set; }
+
     /// <summary>Check GitHub for a newer release at most once a day.</summary>
     public bool CheckForUpdates { get; set; } = true;
 

@@ -68,6 +68,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 [UninstallRun]
 ; The uninstaller can't close apps by itself; ask a running MouseFix to exit (and wait) so its files can be removed.
 Filename: "{app}\{#AppExe}"; Parameters: "--exit"; Flags: runhidden waituntilterminated; RunOnceId: "CloseMouseFix"
+; Leave game mode and delete the "MouseFix Jogo" power plan, so Windows isn't left on a plan from an uninstalled app.
+Filename: "{app}\{#AppExe}"; Parameters: "--remove-power-plan"; Flags: runhidden waituntilterminated; RunOnceId: "RemovePowerPlan"
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent

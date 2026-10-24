@@ -16,6 +16,8 @@ public enum ChangeSource
     Restore,
     /// <summary>MouseFix itself, e.g. replacing protection curves written by an older version.</summary>
     MouseFix,
+    /// <summary>Game mode (the "MouseFix Jogo" power plan) turned on or off because an emulator opened or closed.</summary>
+    GameMode,
 }
 
 /// <param name="Time">When it happened (the latest time, for grouped entries).</param>

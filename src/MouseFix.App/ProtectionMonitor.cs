@@ -41,16 +41,125 @@ public sealed class ProtectionMonitor
     private string? _lastError;
 
     private readonly ChangeHistory _history;
+    private readonly GameModeService _gameMode;
+    private readonly Func<bool> _gameModeWithEmulator;
+    // Null until the first process check, so an emulator already open when MouseFix starts counts as "just opened".
+    private bool? _emulatorWasRunning;
 
     public ProtectionMonitor(MouseFixService service, Func<bool> isEnabled, Func<IReadOnlyList<SpeedProfile>> profiles,
-        ChangeHistory history)
+        ChangeHistory history, GameModeService gameMode, Func<bool> gameModeWithEmulator)
     {
         _service = service;
         _isEnabled = isEnabled;
         _profiles = profiles;
         _history = history;
+        _gameMode = gameMode;
+        _gameModeWithEmulator = gameModeWithEmulator;
         _hook = WndProc;
         _timer.Tick += (_, _) => OnTick();
+    }
+
+    /// <summary>Raised when game mode turned on or off (by an emulator or by the user).</summary>
+    public event EventHandler? GameModeChanged;
+
+    /// <summary>True while a supported emulator is running (as of the last process check).</summary>
+    public bool EmulatorRunning => _emulatorWasRunning == true;
+
+    /// <summary>
+    /// The button: turns game mode on (it then stays until the user turns it off) or off. Records it in the history.
+    /// Returns null when verified, otherwise what failed.
+    /// </summary>
+    public string? ToggleGameMode()
+    {
+        bool turningOn = !_gameMode.IsActive;
+        string? problem = turningOn ? _gameMode.Activate(automatic: false) : _gameMode.Deactivate();
+        RecordGameMode(ChangeSource.User, turningOn
+            ? $"Modo jogo ligado (plano {GameModeService.PlanName})"
+            : $"Modo jogo desligado (plano {_gameMode.ActivePlanName})", problem);
+        GameModeChanged?.Invoke(this, EventArgs.Empty);
+        return problem;
+    }
+
+    private void RecordGameMode(ChangeSource source, string description, string? problem)
+    {
+        if (problem is null && _gameMode.Unsupported.Count > 0 && _gameMode.IsActive)
+            description += $". Este PC não tem: {string.Join(", ", _gameMode.Unsupported).ToLowerInvariant()}";
+        _history.Add(new ChangeEntry(DateTime.Now, source, description, problem is null, problem));
+        Log.Info(problem is null ? description : $"{description} — falhou: {problem}");
+    }
+
+    /// <summary>Emulator opened → game mode on (if enabled and not already on); emulator closed → back to the previous plan.</summary>
+    private void HandleEmulator(HashSet<string> running)
+    {
+        var emulator = SpeedProfiles.KnownPrograms.Keys.FirstOrDefault(running.Contains);
+        bool isRunning = emulator is not null;
+        bool wasRunning = _emulatorWasRunning ?? false;
+        bool firstCheck = _emulatorWasRunning is null;
+        _emulatorWasRunning = isRunning;
+
+        // MouseFix restarted (or crashed) after turning game mode on for an emulator that is now closed.
+        if (firstCheck && !isRunning && _gameMode.ActivatedAutomatically)
+        {
+            RecordGameMode(ChangeSource.GameMode, "Modo jogo desligado (o emulador já tinha fechado)", _gameMode.Deactivate());
+            GameModeChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (isRunning == wasRunning && !firstCheck)
+            return;
+
+        if (isRunning)
+        {
+            string name = SpeedProfiles.KnownPrograms[emulator!];
+            EnsureDedicatedGpu(emulator!, name);
+            if (_gameModeWithEmulator() && !_gameMode.IsActive)
+            {
+                RecordGameMode(ChangeSource.GameMode, $"Modo jogo ligado ({name} aberto)", _gameMode.Activate(automatic: true));
+                GameModeChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        else if (_gameMode.ActivatedAutomatically)
+        {
+            RecordGameMode(ChangeSource.GameMode, "Modo jogo desligado (emulador fechado)", _gameMode.Deactivate());
+            GameModeChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    // On laptops with two GPUs, makes the emulator use the dedicated one. Skipped if the user already chose.
+    private void EnsureDedicatedGpu(string processName, string displayName)
+    {
+        if (!_gameModeWithEmulator())
+            return;
+        try
+        {
+            var processes = Process.GetProcessesByName(processName);
+            try
+            {
+                var path = processes.FirstOrDefault()?.MainModule?.FileName;
+                if (path is not null && GpuPreference.EnsureHighPerformance(path))
+                    RecordGameMode(ChangeSource.GameMode, $"{displayName} marcado para usar a placa de vídeo de alto desempenho", null);
+            }
+            finally
+            {
+                foreach (var p in processes)
+                    p.Dispose();
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException)
+        {
+            // Can't read the emulator's path (e.g. it runs as administrator): leave the graphics preference alone.
+        }
+    }
+
+    private static HashSet<string> RunningProcessNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in Process.GetProcesses())
+        {
+            using (p)
+                names.Add(p.ProcessName);
+        }
+        return names;
     }
 
     public event EventHandler? Reapplied;
@@ -81,6 +190,13 @@ public sealed class ProtectionMonitor
 
     /// <summary>Runs a full check now, profiles included, e.g. right after the profile list changed.</summary>
     public void CheckNow() => Check(checkProfiles: true);
+
+    /// <summary>Treats an emulator that is already open as just opened, e.g. right after automatic game mode was turned on.</summary>
+    public void RecheckEmulator()
+    {
+        _emulatorWasRunning = null;
+        CheckNow();
+    }
 
     private void OnTick() => Check(checkProfiles: _tick++ % ProfileCheckEveryTicks == 0);
 
@@ -118,7 +234,11 @@ public sealed class ProtectionMonitor
     {
         if (checkProfiles)
         {
-            var active = SpeedProfiles.FindActive(_profiles(), IsRunning);
+            // One process list per check, shared by game mode and profiles.
+            var running = RunningProcessNames();
+            HandleEmulator(running);
+
+            var active = SpeedProfiles.FindActive(_profiles(), running.Contains);
             if (active != ActiveProfile)
             {
                 ActiveProfile = active;
@@ -210,12 +330,4 @@ public sealed class ProtectionMonitor
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
-
-    private static bool IsRunning(string processName)
-    {
-        var processes = Process.GetProcessesByName(processName);
-        foreach (var p in processes)
-            p.Dispose();
-        return processes.Length > 0;
-    }
 }
