@@ -51,6 +51,7 @@ public partial class MainWindow : FluentWindow
         AccelToggle.IsChecked = settings.AccelerationEnabled;
         GameModeAutoCheck.IsChecked = settings.GameModeWithEmulator;
         AboutText.Text = $"MouseFix {CurrentVersion.ToString(3)}";
+        TitleVersion.Text = $"v{CurrentVersion.ToString(3)}";
         LanguageBox.SelectedItem = LanguageBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == (settings.Language ?? ""))
             ?? LanguageBox.Items[0];
         _initializing = false;

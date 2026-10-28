@@ -60,6 +60,8 @@
                 <TextBlock FontSize="17" FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center">
                     <Run Text="Mouse" Foreground="White" /><Run Text="Fix" Foreground="{StaticResource MfAccent}" />
                 </TextBlock>
+                <TextBlock x:Name="TitleVersion" FontSize="12" Foreground="{StaticResource MfTextMuted}" Margin="8,3,0,0"
+                           VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 
