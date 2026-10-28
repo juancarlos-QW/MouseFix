@@ -35,6 +35,9 @@ public partial class DistanceTestWindow : FluentWindow
         UpdateResults();
     }
 
+    /// <summary>The DPI once there are enough drags to trust it (one drag can be off by a few millimetres).</summary>
+    public double? MeasuredDpi => _analyzer.Strokes.Count >= DistanceTestAnalyzer.MinStrokesPerGroup ? _analyzer.Dpi : null;
+
     private nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
     {
         if (msg == RawMouse.WM_INPUT && RawMouse.TryRead(lParam, out var packet))

@@ -322,6 +322,12 @@
                             <TextBlock Style="{StaticResource Muted}" Text="Mostra aceleração no mouse ou no driver, o DPI real e o polling rate" />
                         </StackPanel>
                     </ui:CardAction>
+                    <ui:CardAction Icon="{ui:SymbolIcon Calculator24}" Margin="0,4,0,0" Click="SensitivityButton_Click">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource RowTitle}" Text="Calculadora de sensibilidade" />
+                            <TextBlock Style="{StaticResource Muted}" Text="eDPI, cm para atravessar a tela e como trocar de DPI sem mudar a sensação" />
+                        </StackPanel>
+                    </ui:CardAction>
 
                     <TextBlock Style="{StaticResource SectionLabel}" Text="SITUAÇÃO ATUAL DO WINDOWS" />
                     <Border Style="{StaticResource MfPanelStyle}" Padding="18,14">

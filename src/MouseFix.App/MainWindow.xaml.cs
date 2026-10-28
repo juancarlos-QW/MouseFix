@@ -744,8 +744,20 @@ public partial class MainWindow : FluentWindow
     private void TestButton_Click(object sender, RoutedEventArgs e) =>
         new PrecisionTestWindow { Owner = this }.ShowDialog();
 
-    private void DistanceTestButton_Click(object sender, RoutedEventArgs e) =>
-        new DistanceTestWindow { Owner = this }.ShowDialog();
+    private void DistanceTestButton_Click(object sender, RoutedEventArgs e) => Run(() =>
+    {
+        var window = new DistanceTestWindow { Owner = this };
+        window.ShowDialog();
+        if (window.MeasuredDpi is not double dpi)
+            return;
+        _settings.MeasuredDpi = Math.Round(dpi);
+        _settings.MeasuredDpiDate = DateTime.Now;
+        _settings.Save(AppSettings.DefaultPath);
+        Log.Info($"DPI medido no teste de distância: {_settings.MeasuredDpi:0}");
+    });
+
+    private void SensitivityButton_Click(object sender, RoutedEventArgs e) =>
+        new SensitivityWindow(_settings) { Owner = this }.ShowDialog();
 
     private void AutoReapplyToggle_Click(object sender, RoutedEventArgs e) => Run(() =>
     {

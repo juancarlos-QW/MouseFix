@@ -54,6 +54,11 @@ public sealed class AppSettings
     /// <summary>The emulator's aim sensitivity before MouseFix adjusted it for 1:1, so it is only adjusted once.</summary>
     public double? EmulatorSensitivityBeforeAdjust { get; set; }
 
+    /// <summary>Real DPI from the last distance test, for the sensitivity calculator.</summary>
+    public double? MeasuredDpi { get; set; }
+
+    public DateTime? MeasuredDpiDate { get; set; }
+
     public static string DefaultPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MouseFix", "settings.json");
 
