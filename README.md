@@ -2,7 +2,9 @@
 
 Remove a aceleração do mouse no Windows com um clique, mantém ela desligada e mostra, com testes, se o seu mouse está realmente 1:1. Também verifica a mira do **Free Fire** no **MSI App Player / BlueStacks 5**.
 
-Grátis e de código aberto. Não precisa de administrador nem de instalar nada.
+Grátis e de código aberto. Não precisa de administrador nem de instalar nada. Em português e em inglês (segue o idioma do Windows).
+
+> **English:** MouseFix removes Windows mouse acceleration with one click, keeps it off, and tests whether your mouse is really 1:1. The app is in English on non-Portuguese Windows (or pick it in Settings → Idioma / Language). Download it from [Releases](../../releases/latest).
 
 ![Tela do MouseFix](docs/screenshot.png)
 
@@ -36,11 +38,12 @@ Funciona no Windows 10 e 11 (64 bits).
 - **Aplica e verifica:** depois de cada mudança, o MouseFix lê o Windows de volta e mostra "Aplicado e verificado" ou exatamente o que não pegou.
 - **Histórico:** o que mudou, quando, quem mudou (você, um perfil ou outro programa, com o nome) e se foi verificado.
 - **Guarda suas configurações originais** e volta tudo com **Restaurar original**.
-- Em Configurações: velocidade de rolagem, interruptor de aceleração (se você quiser mesmo ligá-la), perfis, emulador, testes e ajuda.
+- Em Configurações: velocidade de rolagem, interruptor de aceleração (se você quiser mesmo ligá-la), idioma, perfis, emulador, testes e ajuda.
 - Grava curvas lineares de proteção (o "MarkC fix"): se algum programa ligar a aceleração, o movimento continua igual. Valem depois de sair da conta do Windows e entrar de novo uma vez.
 
 **Modo jogo (plano de energia)**
 - Um botão liga o plano de energia **"MouseFix Jogo"**, feito a partir do "Alto desempenho" do Windows: processador sempre em 100%, sem estacionamento de núcleos, turbo agressivo, sem economia de energia no USB e no PCIe, e o PC nunca dorme.
+- Com o modo jogo ligado, o emulador roda com **prioridade alta** (o Windows dá o processador para ele primeiro). Volta ao normal quando o modo jogo desliga. Se você mesmo escolheu outra prioridade, o MouseFix não mexe.
 - **Liga sozinho quando um emulador abre** (MSI App Player, BlueStacks, LDPlayer, MuMu, GameLoop) e volta ao seu plano anterior quando ele fecha. Se você trocar de plano no meio, o MouseFix respeita.
 - Em notebooks com duas placas de vídeo, marca o emulador para usar a **placa dedicada** (se você ainda não escolheu outra coisa).
 - Não precisa de administrador. Ao desinstalar o MouseFix, o plano "MouseFix Jogo" é apagado.
@@ -50,18 +53,20 @@ Funciona no Windows 10 e 11 (64 bits).
 - **Proteção automática:** se algum programa mudar a aceleração ou a velocidade, o MouseFix desfaz em até 0,1 segundo e anota no histórico quem foi.
 - **Perfis por programa:** escolha uma velocidade para um programa (ex.: o emulador). Quando ele abre, o MouseFix troca a velocidade sozinho; quando fecha, volta ao padrão. A aceleração fica sempre desligada.
 - Opção de **iniciar com o Windows**.
-- **Aviso de versão nova** (pode desligar): consulta o GitHub uma vez por dia.
+- **Aviso de versão nova** (pode desligar): consulta o GitHub uma vez por dia. O botão **Atualizar agora** baixa, confere o SHA-256 e instala sozinho, sem perder as configurações.
 - **Reportar problema:** abre o GitHub com um relatório já preenchido (versão, Windows e log), que você revisa antes de enviar.
 - Avisa se um software de mouse (Razer Synapse, Logitech G HUB, Corsair iCUE...) está aberto, porque eles podem aplicar aceleração no driver.
 
 **Testes (em Configurações)**
 - **Precisão do Windows:** lê o sensor direto (Raw Input) e compara com o cursor em várias velocidades. Mostra "1:1 confirmado" ou "aceleração detectada".
 - **Distância:** você arrasta o mouse a mesma distância devagar e rápido. Mostra se o mouse ou o driver dele aplica aceleração, o **DPI real** e o **polling rate**.
+- **Calculadora de sensibilidade:** eDPI, pixels por cm e quantos cm você move para atravessar a tela, com o DPI medido no teste de distância. Também diz qual velocidade do Windows usar para trocar de DPI sem mudar a sensação.
 
 **Emulador (MSI App Player / BlueStacks 5 com Free Fire ou Free Fire MAX)**
 - Mostra se a aceleração do emulador está ligada e desliga, se precisar (com backup).
 - **Teste do emulador:** descobre se a mira do jogo segue o cursor do Windows ou lê o sensor direto.
 - Se a velocidade do Windows mudou, sugere e aplica a sensibilidade certa para a mira continuar com a mesma sensação.
+- **LDPlayer, MuMu e GameLoop:** o MouseFix reconhece e cuida do Windows para eles (aceleração, velocidade, perfis, modo jogo, prioridade) e o teste do emulador funciona. Os arquivos de controles deles ainda não são lidos, porque o formato não pôde ser confirmado.
 
 ## O que ele NÃO faz (seja realista)
 
