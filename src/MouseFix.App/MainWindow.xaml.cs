@@ -395,7 +395,7 @@ public partial class MainWindow : FluentWindow
         GameModeIcon.SetResourceReference(ForegroundProperty, active ? "MfAccent" : "MfTextMuted");
 
         GameModeText.Text = active
-            ? $"Plano de energia \"{GameModeService.PlanName}\": processador sempre em 100%, sem economia de energia." +
+            ? $"Plano de energia \"{GameModeService.PlanName}\": processador sempre em 100%, sem economia de energia e o emulador com prioridade alta." +
               (_gameMode.ActivatedAutomatically ? " Ligado porque o emulador está aberto; volta sozinho quando fechar." : "")
             : $"Plano de energia atual: {planName}. O modo jogo deixa o PC no desempenho máximo enquanto você joga.";
         GameModeButton.Content = active ? "Voltar ao plano normal" : "Ativar modo jogo";

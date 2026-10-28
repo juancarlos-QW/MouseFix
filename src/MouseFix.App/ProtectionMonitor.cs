@@ -45,6 +45,8 @@ public sealed class ProtectionMonitor
     private readonly Func<bool> _gameModeWithEmulator;
     // Null until the first process check, so an emulator already open when MouseFix starts counts as "just opened".
     private bool? _emulatorWasRunning;
+    // Emulator processes whose priority MouseFix raised, so only those go back to normal (not ones the user set).
+    private readonly HashSet<int> _raisedPriority = [];
 
     public ProtectionMonitor(MouseFixService service, Func<bool> isEnabled, Func<IReadOnlyList<SpeedProfile>> profiles,
         ChangeHistory history, GameModeService gameMode, Func<bool> gameModeWithEmulator)
@@ -76,8 +78,47 @@ public sealed class ProtectionMonitor
         RecordGameMode(ChangeSource.User, turningOn
             ? $"Modo jogo ligado (plano {GameModeService.PlanName})"
             : $"Modo jogo desligado (plano {_gameMode.ActivePlanName})", problem);
+        UpdateEmulatorPriority();
         GameModeChanged?.Invoke(this, EventArgs.Empty);
         return problem;
+    }
+
+    /// <summary>
+    /// High priority for the emulator while game mode is on, so Windows gives it the CPU first; back to normal
+    /// when game mode turns off. Only touches processes still at normal priority, or ones MouseFix raised.
+    /// </summary>
+    public void UpdateEmulatorPriority()
+    {
+        bool raise = _gameMode.IsActive;
+        foreach (var (processName, displayName) in SpeedProfiles.KnownPrograms)
+        {
+            foreach (var p in Process.GetProcessesByName(processName))
+            {
+                using (p)
+                {
+                    try
+                    {
+                        if (raise && !_raisedPriority.Contains(p.Id) && p.PriorityClass == ProcessPriorityClass.Normal)
+                        {
+                            p.PriorityClass = ProcessPriorityClass.High;
+                            _raisedPriority.Add(p.Id);
+                            RecordGameMode(ChangeSource.GameMode, $"Prioridade do {displayName}: alta", null);
+                        }
+                        else if (!raise && _raisedPriority.Remove(p.Id) && p.PriorityClass == ProcessPriorityClass.High)
+                        {
+                            p.PriorityClass = ProcessPriorityClass.Normal;
+                            RecordGameMode(ChangeSource.GameMode, $"Prioridade do {displayName}: normal", null);
+                        }
+                    }
+                    catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+                    {
+                        // The emulator runs as administrator, or just closed: leave its priority alone.
+                    }
+                }
+            }
+        }
+        if (!raise)
+            _raisedPriority.Clear(); // closed processes; their ids may be reused
     }
 
     private void RecordGameMode(ChangeSource source, string description, string? problem)
@@ -117,11 +158,16 @@ public sealed class ProtectionMonitor
                 RecordGameMode(ChangeSource.GameMode, $"Modo jogo ligado ({name} aberto)", _gameMode.Activate(automatic: true));
                 GameModeChanged?.Invoke(this, EventArgs.Empty);
             }
+            UpdateEmulatorPriority();
         }
-        else if (_gameMode.ActivatedAutomatically)
+        else
         {
-            RecordGameMode(ChangeSource.GameMode, "Modo jogo desligado (emulador fechado)", _gameMode.Deactivate());
-            GameModeChanged?.Invoke(this, EventArgs.Empty);
+            _raisedPriority.Clear();
+            if (_gameMode.ActivatedAutomatically)
+            {
+                RecordGameMode(ChangeSource.GameMode, "Modo jogo desligado (emulador fechado)", _gameMode.Deactivate());
+                GameModeChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 

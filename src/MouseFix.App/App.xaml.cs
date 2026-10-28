@@ -208,7 +208,10 @@ public partial class App : Application
         try
         {
             if (_gameMode?.ActivatedAutomatically == true)
+            {
                 _gameMode.Deactivate();
+                _monitor?.UpdateEmulatorPriority();
+            }
         }
         catch (Exception ex)
         {
