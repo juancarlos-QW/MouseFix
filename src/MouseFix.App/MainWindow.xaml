@@ -85,14 +85,22 @@
                     <!-- New version available -->
                     <Border x:Name="UpdateCard" Style="{StaticResource MfPanelStyle}" Padding="16,12" Margin="0,0,0,16"
                             BorderBrush="{StaticResource MfAccent}" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="UpdateTitle" Foreground="White" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
-                            <ui:Button Grid.Column="1" Content="Baixar" Appearance="Primary" Margin="12,0,0,0" Click="UpdateDownloadButton_Click" />
-                        </Grid>
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="UpdateTitle" Foreground="White" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <ui:Button x:Name="UpdateNowButton" Grid.Column="1" Content="Atualizar agora" Icon="{ui:SymbolIcon ArrowDownload24}"
+                                           Appearance="Primary" Margin="12,0,0,0" Click="UpdateNowButton_Click" />
+                            </Grid>
+                            <TextBlock x:Name="UpdateStatus" Style="{StaticResource Muted}" FontSize="13" Margin="0,8,0,0"
+                                       Text="Baixa, confere o arquivo (SHA-256) e instala sozinho. Suas configurações continuam." />
+                            <ProgressBar x:Name="UpdateProgress" Height="4" Margin="0,8,0,0" Maximum="1" Visibility="Collapsed" />
+                            <ui:Button x:Name="UpdatePageButton" Content="Abrir a página de download" Appearance="Transparent"
+                                       Foreground="{StaticResource MfAccent}" Margin="-8,4,0,0" Click="UpdateDownloadButton_Click" />
+                        </StackPanel>
                     </Border>
 
                     <!-- Big status -->

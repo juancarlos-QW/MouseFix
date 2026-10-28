@@ -3,12 +3,36 @@ using System.Text.Json;
 
 namespace MouseFix.Core;
 
-public sealed record UpdateInfo(Version Version, string Url);
+/// <param name="Url">The release page (fallback when installing in the app isn't possible).</param>
+/// <param name="Assets">Downloadable files of the release, by file name.</param>
+public sealed record UpdateInfo(Version Version, string Url, IReadOnlyDictionary<string, string>? Assets = null)
+{
+    /// <summary>The installer and its checksum file, if the release has them.</summary>
+    public (string File, string Checksum)? Installer => Pair(n => n.StartsWith("MouseFix-Setup-", StringComparison.OrdinalIgnoreCase));
 
-/// <summary>Asks GitHub for the latest release. This is the only network access MouseFix makes.</summary>
+    /// <summary>The portable exe and its checksum file, if the release has them.</summary>
+    public (string File, string Checksum)? Portable => Pair(n => n.Equals("MouseFix.exe", StringComparison.OrdinalIgnoreCase));
+
+    private (string, string)? Pair(Func<string, bool> isFile)
+    {
+        if (Assets is null)
+            return null;
+        var file = Assets.Keys.FirstOrDefault(n => n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && isFile(n));
+        if (file is null || !Assets.TryGetValue(file + ".sha256", out var checksum))
+            return null;
+        return (Assets[file], checksum);
+    }
+}
+
+/// <summary>Asks GitHub for the latest release. Checking and downloading updates are the only network access MouseFix makes.</summary>
 public static class UpdateChecker
 {
-    public const string LatestReleaseApi = "https://api.github.com/repos/juancarlos-QW/MouseFix/releases/latest";
+    private const string DefaultLatestReleaseApi = "https://api.github.com/repos/juancarlos-QW/MouseFix/releases/latest";
+
+    /// <summary>The GitHub API address. MOUSEFIX_UPDATE_API can point it at a local test server.</summary>
+    public static string LatestReleaseApi =>
+        Environment.GetEnvironmentVariable("MOUSEFIX_UPDATE_API") is { Length: > 0 } custom ? custom : DefaultLatestReleaseApi;
+
     public static readonly TimeSpan Interval = TimeSpan.FromDays(1);
 
     /// <summary>Returns the latest release if it is newer than <paramref name="current"/>; null otherwise or on any failure.</summary>
@@ -37,7 +61,20 @@ public static class UpdateChecker
             if (!root.TryGetProperty("tag_name", out var tag) || !root.TryGetProperty("html_url", out var url))
                 return null;
             var version = ParseVersion(tag.GetString());
-            return version is null ? null : new UpdateInfo(version, url.GetString() ?? "");
+            if (version is null)
+                return null;
+
+            var assets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (root.TryGetProperty("assets", out var list) && list.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var asset in list.EnumerateArray())
+                {
+                    if (asset.TryGetProperty("name", out var name) && asset.TryGetProperty("browser_download_url", out var download) &&
+                        name.GetString() is { } n && download.GetString() is { } d)
+                        assets[n] = d;
+                }
+            }
+            return new UpdateInfo(version, url.GetString() ?? "", assets);
         }
         catch (JsonException)
         {

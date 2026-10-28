@@ -1,11 +1,13 @@
-; Inno Setup script for the MouseFix installer.
+﻿; Inno Setup script for the MouseFix installer.
 ; Build after publishing the app (see README):
 ;   ISCC.exe installer\MouseFix.iss
 ; Output: installer\Output\MouseFix-Setup-<version>.exe
 
 #define AppName "MouseFix"
 #define AppExe "MouseFix.exe"
-#define PublishDir "..\publish"
+#ifndef PublishDir
+  #define PublishDir "..\publish"
+#endif
 ; Version comes from the published exe (<Version> in MouseFix.App.csproj), as major.minor.patch.
 #define Major
 #define Minor
@@ -73,3 +75,5 @@ Filename: "{app}\{#AppExe}"; Parameters: "--remove-power-plan"; Flags: runhidden
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Silent installs come from "Atualizar agora" inside MouseFix: reopen it when done.
+Filename: "{app}\{#AppExe}"; Parameters: "--updated"; Flags: nowait skipifnotsilent

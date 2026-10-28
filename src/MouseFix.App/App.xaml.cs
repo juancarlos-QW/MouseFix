@@ -52,6 +52,9 @@ public partial class App : Application
             return;
         }
 
+        // After an in-app update, wait for the old copy to close (it holds the single-instance lock).
+        SelfUpdater.FinishUpdate(e.Args);
+
         _instanceMutex = new Mutex(initiallyOwned: true, InstanceName, out bool isFirstInstance);
 
         if (e.Args.Contains(ExitArgument))
@@ -130,6 +133,8 @@ public partial class App : Application
         _window = new MainWindow(_service, settings, monitor, history, gameMode);
         _window.HiddenToTray += OnHiddenToTray;
         _window.CheckForUpdatesRequested += (_, _) => CheckForUpdates(force: true);
+        // The update is downloaded, verified and handed over: close so the new version can take our place.
+        _window.UpdateHandedOver += (_, _) => ExitApp();
 
         _tray = new TrayIcon(open: ShowMainWindow, fixNow: FixNow, report: () => ProblemReporter.Open(_service, monitor), exit: ExitApp);
 
@@ -145,6 +150,14 @@ public partial class App : Application
 
         if (!e.Args.Contains(AutoStart.MinimizedArgument))
             ShowMainWindow();
+
+        if (SelfUpdater.JustUpdated(e.Args))
+        {
+            string version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "";
+            Log.Info($"MouseFix atualizado para a versão {version}.");
+            history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix, $"MouseFix atualizado para a versão {version}", true));
+            _tray?.Notify("MouseFix atualizado", $"Agora você está na versão {version}.");
+        }
     }
 
     private async void CheckForUpdates(bool force)

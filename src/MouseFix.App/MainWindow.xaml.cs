@@ -574,6 +574,50 @@ public partial class MainWindow : FluentWindow
             UpdateTitle.Text = $"MouseFix {available!.ToString(3)} disponível (você tem a {CurrentVersion.ToString(3)})";
     }
 
+    /// <summary>Raised when an update was downloaded, verified and handed over; the app must exit for it to finish.</summary>
+    public event EventHandler? UpdateHandedOver;
+
+    private async void UpdateNowButton_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateNowButton.IsEnabled = false;
+        UpdatePageButton.Visibility = Visibility.Collapsed;
+        UpdateStatus.Text = "Procurando a versão nova…";
+        try
+        {
+            // Ask GitHub again: the download links aren't kept between checks.
+            var update = await UpdateChecker.CheckAsync(CurrentVersion);
+            if (update is null)
+            {
+                UpdateStatus.Text = "Você já tem a versão mais recente.";
+                UpdateCard.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            UpdateProgress.Visibility = Visibility.Visible;
+            var progress = new Progress<double>(p =>
+            {
+                UpdateProgress.Value = p;
+                UpdateStatus.Text = $"Baixando a versão {update.Version.ToString(3)}… {p:P0}";
+            });
+            await SelfUpdater.StartUpdateAsync(update, progress);
+
+            UpdateStatus.Text = SelfUpdater.IsInstalled ? "Instalando… o MouseFix vai reabrir sozinho." : "Reiniciando na versão nova…";
+            _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.User, $"Atualização para a versão {update.Version.ToString(3)} baixada e verificada", true));
+            _history.Flush();
+            UpdateHandedOver?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Falha ao atualizar dentro do app", ex);
+            UpdateProgress.Visibility = Visibility.Collapsed;
+            UpdateStatus.Text = ex is System.Net.Http.HttpRequestException or TaskCanceledException
+                ? "Não foi possível baixar (sem internet ou o GitHub não respondeu). Tente de novo ou abra a página."
+                : $"Não foi possível atualizar: {ex.Message}";
+            UpdatePageButton.Visibility = Visibility.Visible;
+            UpdateNowButton.IsEnabled = true;
+        }
+    }
+
     private void UpdateDownloadButton_Click(object sender, RoutedEventArgs e) => Run(() =>
         ProblemReporter.OpenInBrowser(_settings.AvailableUpdateUrl ?? "https://github.com/juancarlos-QW/MouseFix/releases/latest"));
 
