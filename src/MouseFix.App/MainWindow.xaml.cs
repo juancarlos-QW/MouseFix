@@ -645,9 +645,10 @@ public partial class MainWindow : FluentWindow
             .OrderByDescending(p => System.IO.File.GetLastWriteTimeUtc(p.FilePath))
             .FirstOrDefault();
         _emulatorProfile = profile;
+        bool othersFound = RefreshOtherEmulators();
 
         EmulatorCard.Visibility = profile?.SelectedAim is null ? Visibility.Collapsed : Visibility.Visible;
-        EmulatorEmpty.Visibility = profile?.SelectedAim is null ? Visibility.Visible : Visibility.Collapsed;
+        EmulatorEmpty.Visibility = profile?.SelectedAim is null && !othersFound ? Visibility.Visible : Visibility.Collapsed;
         if (profile?.SelectedAim is not { } aim)
             return;
 
@@ -666,6 +667,28 @@ public partial class MainWindow : FluentWindow
         bool needsAdjust = suggested is double s && Math.Abs(s - aim.Sensitivity) >= 0.01;
         EmulatorSensButton.Visibility = needsAdjust ? Visibility.Visible : Visibility.Collapsed;
         EmulatorSensButton.Content = $"Aplicar sensibilidade {suggested:0.00}";
+    }
+
+    // LDPlayer, MuMu or GameLoop: MouseFix handles Windows for them, but can't read their own mapping files.
+    private bool RefreshOtherEmulators()
+    {
+        var others = OtherEmulators.FindInstalled();
+        EmulatorOthers.Visibility = others.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (others.Count == 0)
+            return false;
+
+        EmulatorOthersTitle.Text = string.Join(", ", others);
+        string cursor = _settings.EmulatorUsesWindowsCursor switch
+        {
+            true => " Pelo teste, a mira segue o cursor do Windows: a velocidade do MouseFix chega até o jogo.",
+            false => " Pelo teste, a mira lê o sensor direto: ajuste pela sensibilidade do emulador ou pelo DPI do mouse.",
+            null => " Faça o teste para saber se a velocidade do Windows muda a mira no jogo.",
+        };
+        EmulatorOthersText.Text =
+            "O MouseFix já cuida do Windows para ele: aceleração desligada, velocidade, perfis, modo jogo e prioridade. " +
+            "A aceleração e a sensibilidade de dentro do emulador ficam no mapeamento de teclas dele, que o MouseFix ainda não lê." + cursor;
+        EmulatorOthersTestButton.Content = _settings.EmulatorUsesWindowsCursor is null ? "Testar emulador" : "Testar de novo";
+        return true;
     }
 
     private string EmulatorAdviceFor(string game, EmulatorAim aim) => _settings.EmulatorUsesWindowsCursor switch
