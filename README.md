@@ -15,7 +15,18 @@ Na página de **[Releases](../../releases/latest)**, baixe um dos dois:
 
 Funciona no Windows 10 e 11 (64 bits).
 
-> **O Windows pode mostrar "O Windows protegeu o computador".** Isso acontece porque o app é novo e não tem assinatura digital (que é paga). Clique em **Mais informações → Executar assim mesmo**. Se preferir, confira o código SHA-256 do arquivo (está na página do release) ou compile você mesmo a partir deste código.
+> **O Windows pode mostrar "O Windows protegeu o computador".** Isso acontece porque o app é novo e não tem assinatura digital (que é paga). Clique em **Mais informações → Executar assim mesmo**. Veja abaixo como conferir que o arquivo é seguro.
+
+## É seguro? Como conferir que não tem vírus
+
+- **Código aberto:** tudo o que o app faz está neste repositório.
+- **Compilado pelo GitHub, não num PC qualquer:** desde a versão 1.5.0, os arquivos do release são gerados pelo **GitHub Actions** direto deste código (aba [Actions](../../actions)). Cada arquivo leva uma **atestação** assinada pelo GitHub, que prova de qual código e de qual execução ele saiu. Se alguém trocasse o arquivo, a atestação não bateria. Para conferir, veja a página [Attestations](../../attestations) ou rode, com o [GitHub CLI](https://cli.github.com/):
+  ```
+  gh attestation verify MouseFix.exe --repo juancarlos-QW/MouseFix
+  ```
+- **VirusTotal:** cada release traz o link da análise do arquivo no [VirusTotal](https://www.virustotal.com/), que passa o arquivo por dezenas de antivírus de uma vez. Um ou outro antivírus menos conhecido às vezes acusa apps novos e sem assinatura só por serem novos (falso positivo); o resultado completo fica no link, para você julgar.
+- **SHA-256:** cada arquivo tem um `.sha256` ao lado no release. Para comparar no PowerShell: `Get-FileHash MouseFix.exe`.
+- **Atualização dentro do app:** o botão **Atualizar agora** só instala o arquivo se o SHA-256 dele bater com o publicado no release; se não bater, ele é apagado e nada é instalado.
 
 ## O que ele faz
 

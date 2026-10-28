@@ -1,0 +1,68 @@
+# Builds a release on GitHub's own machines from the public code, so anyone can check that the files
+# on the Releases page came from this repository and nothing else (artifact attestation).
+# Runs when a version tag such as v1.5.0 is pushed; the release is created as a draft to be reviewed and published.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write      # create the draft release
+  id-token: write      # sign the attestation
+  attestations: write  # store the attestation
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Tests
+        run: dotnet test --nologo
+
+      - name: Tag matches the version in the project
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content src/MouseFix.App/MouseFix.App.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "The tag ${{ github.ref_name }} doesn't match the project version $version." }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Build MouseFix.exe
+        run: dotnet publish src/MouseFix.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o publish
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y }
+          & $iscc /Q installer\MouseFix.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed." }
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item publish\MouseFix.exe, "installer\Output\MouseFix-Setup-$env:VERSION.exe" dist
+          foreach ($file in Get-ChildItem dist\*.exe) {
+            "$((Get-FileHash $file -Algorithm SHA256).Hash)  $($file.Name)" | Out-File -Encoding ascii -NoNewline "$file.sha256"
+          }
+          Get-Content dist\*.sha256
+
+      - name: Attestation (proof the files were built here, from this code)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*.exe'
+
+      - name: Draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = "docs/release-notes/${{ github.ref_name }}.md"
+          $notesArgs = if (Test-Path $notes) { @('--notes-file', $notes) } else { @('--generate-notes') }
+          gh release create "${{ github.ref_name }}" (Get-ChildItem dist).FullName --draft --title "MouseFix $env:VERSION" @notesArgs
