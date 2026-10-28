@@ -4,48 +4,49 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Teste do emulador" Width="500" SizeToContent="Height" ResizeMode="CanMinimize"
                  WindowStartupLocation="CenterOwner" Icon="pack://application:,,,/Assets/mousefix.ico"
-                 ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round">
+                 ExtendsContentIntoTitleBar="True" WindowBackdropType="None" WindowCornerPreference="Round"
+                 Background="{StaticResource MfWindowBackground}">
     <StackPanel>
         <ui:TitleBar Title="Teste do emulador" ShowMaximize="False" />
 
         <StackPanel Margin="20,4,20,20">
-            <ui:TextBlock TextWrapping="Wrap" Appearance="Secondary"
-                          Text="Descobre se a mira do emulador segue o cursor do Windows (aí o MouseFix e a velocidade do ponteiro afetam o jogo) ou se lê o sensor do mouse direto." />
+            <TextBlock Style="{StaticResource MfMutedText}"
+                       Text="Descobre se a mira do emulador segue o cursor do Windows (aí o MouseFix e a velocidade do ponteiro afetam o jogo) ou se lê o sensor do mouse direto." />
 
-            <ui:Card Margin="0,12,0,0">
+            <Border Style="{StaticResource MfPanelStyle}" Padding="18,14" Margin="0,14,0,0">
                 <StackPanel>
-                    <ui:TextBlock FontTypography="BodyStrong" Text="Como fazer" />
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,6,0,0"
-                                  Text="1. Abra o jogo no emulador e entre num lugar parado, como o Campo de Treinamento, no modo de mira (cursor escondido)." />
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                                  Text="2. Clique em &quot;Iniciar teste&quot; e volte para o jogo (Alt+Tab)." />
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                                  Text="3. A cada 4 segundos a velocidade muda: bipe AGUDO = sua velocidade normal, bipe GRAVE = metade dela." />
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                                  Text="4. Repita sempre o mesmo movimento (ex.: arraste o mouse uns 5 cm para o lado) e veja quanto a mira gira." />
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                                  Text="5. Volte aqui, pare o teste e responda abaixo. A velocidade original volta sozinha." />
+                    <TextBlock Style="{StaticResource MfTitleText}" Text="Como fazer" />
+                    <TextBlock Style="{StaticResource MfBodyText}" Margin="0,8,0,0"
+                               Text="1. Abra o jogo no emulador e entre num lugar parado, como o Campo de Treinamento, no modo de mira (cursor escondido)." />
+                    <TextBlock Style="{StaticResource MfBodyText}" Margin="0,4,0,0"
+                               Text="2. Clique em &quot;Iniciar teste&quot; e volte para o jogo (Alt+Tab)." />
+                    <TextBlock Style="{StaticResource MfBodyText}" Margin="0,4,0,0"
+                               Text="3. A cada 4 segundos a velocidade muda: bipe AGUDO = sua velocidade normal, bipe GRAVE = metade dela." />
+                    <TextBlock Style="{StaticResource MfBodyText}" Margin="0,4,0,0"
+                               Text="4. Repita sempre o mesmo movimento (ex.: arraste o mouse uns 5 cm para o lado) e veja quanto a mira gira." />
+                    <TextBlock Style="{StaticResource MfBodyText}" Margin="0,4,0,0"
+                               Text="5. Volte aqui, pare o teste e responda abaixo. A velocidade original volta sozinha." />
                 </StackPanel>
-            </ui:Card>
+            </Border>
 
-            <ui:Card Margin="0,8,0,0">
+            <Border Style="{StaticResource MfPanelStyle}" Padding="18,14" Margin="0,10,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center">
-                        <ui:TextBlock x:Name="PhaseText" FontTypography="Subtitle" Text="Parado" />
-                        <ui:TextBlock x:Name="PhaseSubtext" Appearance="Secondary" TextWrapping="Wrap"
-                                      Text="O teste para sozinho depois de 2 minutos." />
+                        <TextBlock x:Name="PhaseText" Style="{StaticResource MfTitleText}" FontSize="18" Text="Parado" />
+                        <TextBlock x:Name="PhaseSubtext" Style="{StaticResource MfMutedText}" Margin="0,2,0,0"
+                                   Text="O teste para sozinho depois de 2 minutos." />
                     </StackPanel>
                     <ui:Button x:Name="StartStopButton" Grid.Column="1" Content="Iniciar teste" Icon="{ui:SymbolIcon Play24}"
-                               Appearance="Primary" Click="StartStopButton_Click" />
+                               Appearance="Primary" Margin="12,0,0,0" Click="StartStopButton_Click" />
                 </Grid>
-            </ui:Card>
+            </Border>
 
-            <ui:TextBlock FontTypography="BodyStrong" Margin="0,16,0,0" Text="No bipe grave, a mira girou menos?" />
-            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Style="{StaticResource MfTitleText}" Margin="2,18,0,0" Text="No bipe grave, a mira girou menos?" />
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                 <ui:Button x:Name="YesButton" Content="Sim, girou menos" Click="YesButton_Click" />
                 <ui:Button x:Name="NoButton" Content="Não, girou igual" Margin="8,0,0,0" Click="NoButton_Click" />
             </StackPanel>

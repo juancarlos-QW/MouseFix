@@ -87,16 +87,16 @@ public partial class DistanceTestWindow : FluentWindow
         double diff = ((_analyzer.FastToSlowRatio ?? 1) - 1) * 100;
         (SymbolRegular icon, string brush, string title, string subtitle) = _analyzer.Verdict switch
         {
-            DistanceVerdict.Consistent => (SymbolRegular.CheckmarkCircle24, "SystemFillColorSuccessBrush",
+            DistanceVerdict.Consistent => (SymbolRegular.CheckmarkCircle24, "MfSuccess",
                 "Sem aceleração no mouse ou no driver",
                 $"Rápido e devagar deram a mesma contagem (diferença de {diff:+0;-0;0}%, dentro do erro de posicionar a mão)."),
-            DistanceVerdict.Accelerated => (SymbolRegular.DismissCircle24, "SystemFillColorCriticalBrush",
+            DistanceVerdict.Accelerated => (SymbolRegular.DismissCircle24, "MfDanger",
                 $"Aceleração antes do Windows: rápido conta {diff:0}% a mais",
                 "Procure opções de aceleração ou \"precisão aprimorada\" no software do mouse (ex.: Razer Synapse) e desligue."),
-            DistanceVerdict.LosingCounts => (SymbolRegular.Warning24, "SystemFillColorCautionBrush",
+            DistanceVerdict.LosingCounts => (SymbolRegular.Warning24, "MfWarning",
                 $"Movimentos rápidos contaram {-diff:0}% a menos",
                 "Confira se as arrastadas rápidas foram até a marca. Se foram, o sensor pode estar perdendo rastreamento: limpe o sensor e o mousepad."),
-            _ => (SymbolRegular.Ruler24, "TextFillColorSecondaryBrush",
+            _ => (SymbolRegular.Ruler24, "MfTextMuted",
                 "Coletando arrastadas…",
                 $"Faça pelo menos {DistanceTestAnalyzer.MinStrokesPerGroup} bem devagar e {DistanceTestAnalyzer.MinStrokesPerGroup} bem rápidas (as rápidas precisam ser bem mais rápidas que as lentas)."),
         };

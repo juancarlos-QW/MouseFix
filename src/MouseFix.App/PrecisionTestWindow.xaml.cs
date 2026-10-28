@@ -141,16 +141,16 @@ public partial class PrecisionTestWindow : FluentWindow
 
         (SymbolRegular icon, string brush, string title, string subtitle) = _analyzer.Verdict switch
         {
-            AccelerationVerdict.OneToOne => (SymbolRegular.CheckmarkCircle24, "SystemFillColorSuccessBrush",
+            AccelerationVerdict.OneToOne => (SymbolRegular.CheckmarkCircle24, "MfSuccess",
                 "1:1 confirmado: sem aceleração",
                 "Cada ponto lido pelo sensor move o cursor exatamente 1 pixel, em qualquer velocidade."),
-            AccelerationVerdict.Scaled => (SymbolRegular.Warning24, "SystemFillColorCautionBrush",
+            AccelerationVerdict.Scaled => (SymbolRegular.Warning24, "MfWarning",
                 $"Sem aceleração, mas o cursor anda {_analyzer.OverallRatio:0.00}x",
                 "A relação é constante, então não há aceleração. Não é 1:1 porque a velocidade não está em 10/20, o que é normal se você escolheu outra velocidade."),
-            AccelerationVerdict.Accelerated => (SymbolRegular.DismissCircle24, "SystemFillColorCriticalBrush",
+            AccelerationVerdict.Accelerated => (SymbolRegular.DismissCircle24, "MfDanger",
                 $"Aceleração detectada: {_analyzer.Spread:0.0}x mais rápido em movimentos rápidos",
                 "O cursor anda mais por ponto quando a mão vai rápido. Verifique o MouseFix e o software do fabricante do mouse."),
-            _ => (SymbolRegular.Gauge24, "TextFillColorSecondaryBrush",
+            _ => (SymbolRegular.Gauge24, "MfTextMuted",
                 "Coletando dados…",
                 $"Faça movimentos lentos e rápidos até ter pelo menos {AccelerationAnalyzer.MinSamplesPerBucket} amostras em uma linha lenta e em uma rápida."),
         };

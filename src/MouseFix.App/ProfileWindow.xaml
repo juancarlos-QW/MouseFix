@@ -4,27 +4,35 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Novo perfil" Width="440" SizeToContent="Height" ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner" Icon="pack://application:,,,/Assets/mousefix.ico"
-                 ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round">
+                 ExtendsContentIntoTitleBar="True" WindowBackdropType="None" WindowCornerPreference="Round"
+                 Background="{StaticResource MfWindowBackground}">
     <StackPanel>
         <ui:TitleBar Title="Novo perfil" ShowMaximize="False" ShowMinimize="False" />
 
         <StackPanel Margin="20,4,20,20">
-            <ui:TextBlock TextWrapping="Wrap" Appearance="Secondary"
-                          Text="Quando este programa estiver aberto, o MouseFix usa a velocidade abaixo. Quando fechar, volta para a velocidade padrão. A aceleração fica sempre desligada." />
+            <TextBlock Style="{StaticResource MfMutedText}"
+                       Text="Quando este programa estiver aberto, o MouseFix usa a velocidade abaixo. Quando fechar, volta para a velocidade padrão. A aceleração fica sempre desligada." />
 
-            <ui:TextBlock Text="Programa" FontTypography="BodyStrong" Margin="0,14,0,6" />
-            <ComboBox x:Name="ProgramBox" IsEditable="True" DisplayMemberPath="Label" />
-            <ui:TextBlock Appearance="Tertiary" TextWrapping="Wrap" Margin="0,4,0,0"
-                          Text="Escolha um programa aberto ou digite o nome do .exe (ex.: HD-Player)." />
+            <Border Style="{StaticResource MfPanelStyle}" Padding="18,14" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="Programa" Style="{StaticResource MfTitleText}" Margin="0,0,0,8" />
+                    <ComboBox x:Name="ProgramBox" IsEditable="True" DisplayMemberPath="Label" />
+                    <TextBlock Style="{StaticResource MfMutedText}" FontSize="12" Margin="0,6,0,0"
+                               Text="Escolha um programa aberto ou digite o nome do .exe (ex.: HD-Player)." />
 
-            <Grid Margin="0,14,0,0">
-                <ui:TextBlock Text="Velocidade" FontTypography="BodyStrong" VerticalAlignment="Center" />
-                <ui:TextBlock x:Name="SpeedLabel" FontTypography="BodyStrong" HorizontalAlignment="Right" VerticalAlignment="Center" />
-            </Grid>
-            <Slider x:Name="SpeedSlider" Minimum="1" Maximum="20" TickFrequency="1" IsSnapToTickEnabled="True"
-                    TickPlacement="BottomRight" Margin="0,8,0,0" Value="10" ValueChanged="SpeedSlider_ValueChanged" />
+                    <Border Style="{StaticResource MfDividerStyle}" Margin="0,16" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                    <Grid>
+                        <TextBlock Text="Velocidade" Style="{StaticResource MfTitleText}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="SpeedLabel" Style="{StaticResource MfTitleText}" Foreground="{StaticResource MfAccent}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                    <Slider x:Name="SpeedSlider" Style="{StaticResource MfSlider}" Minimum="1" Maximum="20" TickFrequency="1"
+                            IsSnapToTickEnabled="True" Margin="0,10,0,0" Value="10" ValueChanged="SpeedSlider_ValueChanged" />
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <ui:Button Content="Cancelar" IsCancel="True" Click="CancelButton_Click" />
                 <ui:Button Content="Adicionar" Appearance="Primary" IsDefault="True" Margin="8,0,0,0" Click="AddButton_Click" />
             </StackPanel>
