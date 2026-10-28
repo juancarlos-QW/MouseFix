@@ -35,24 +35,24 @@ public static class IssueReport
     private static string Compose(IssueReportInfo info, string log)
     {
         var body = new StringBuilder()
-            .AppendLine("**O que aconteceu?**")
+            .AppendLine(L.T("**O que aconteceu?**", "**What happened?**"))
             .AppendLine()
             .AppendLine()
-            .AppendLine("**O que você esperava?**")
+            .AppendLine(L.T("**O que você esperava?**", "**What did you expect?**"))
             .AppendLine()
             .AppendLine()
             .AppendLine("---")
             .AppendLine($"- MouseFix: {info.AppVersion}")
             .AppendLine($"- Windows: {info.WindowsVersion}")
-            .AppendLine($"- Escala da tela: {info.DisplayScalePercent}%")
-            .AppendLine($"- Mouse no Windows: {info.MouseState}")
-            .AppendLine($"- Software de mouse aberto: {(info.MouseSoftware.Count == 0 ? "nenhum" : string.Join(", ", info.MouseSoftware))}")
-            .AppendLine($"- Emulador: {info.Emulator ?? "nenhum encontrado"}");
+            .AppendLine(L.T($"- Escala da tela: {info.DisplayScalePercent}%", $"- Display scale: {info.DisplayScalePercent}%"))
+            .AppendLine(L.T($"- Mouse no Windows: {info.MouseState}", $"- Mouse in Windows: {info.MouseState}"))
+            .AppendLine(L.T($"- Software de mouse aberto: {(info.MouseSoftware.Count == 0 ? "nenhum" : string.Join(", ", info.MouseSoftware))}", $"- Mouse software open: {(info.MouseSoftware.Count == 0 ? "none" : string.Join(", ", info.MouseSoftware))}"))
+            .AppendLine(L.T($"- Emulador: {info.Emulator ?? "nenhum encontrado"}", $"- Emulator: {info.Emulator ?? "none found"}"));
 
         if (!string.IsNullOrWhiteSpace(log))
             body.AppendLine().AppendLine("<details><summary>Log</summary>").AppendLine().AppendLine("```").AppendLine(log).AppendLine("```").AppendLine("</details>");
 
-        return $"{NewIssueUrl}?title={Uri.EscapeDataString("Problema: ")}&body={Uri.EscapeDataString(body.ToString())}";
+        return $"{NewIssueUrl}?title={Uri.EscapeDataString(L.T("Problema: ", "Problem: "))}&body={Uri.EscapeDataString(body.ToString())}";
     }
 
     /// <summary>Last lines of the log with the user's profile path replaced, so the Windows user name isn't shared.</summary>

@@ -23,7 +23,7 @@ public sealed class AccelerationAnalyzer
 
     // Upper limits of each bucket, in sensor counts per millisecond.
     private static readonly double[] BucketLimits = [0.5, 2, 5];
-    private static readonly string[] BucketNames = ["Lento", "Médio", "Rápido", "Muito rápido"];
+    private static string[] BucketNames => [L.T("Lento", "Slow"), L.T("Médio", "Medium"), L.T("Rápido", "Fast"), L.T("Muito rápido", "Very fast")];
 
     // Tiny movements are dominated by pixel rounding, so they are ignored.
     private const double MinCounts = 8;

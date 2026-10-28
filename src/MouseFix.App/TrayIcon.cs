@@ -1,4 +1,5 @@
 using System.Windows;
+using MouseFix.Core;
 using Drawing = System.Drawing;
 using Forms = System.Windows.Forms;
 
@@ -14,11 +15,11 @@ internal sealed class TrayIcon : IDisposable
         using var stream = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/mousefix.ico")).Stream;
 
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Abrir MouseFix", null, (_, _) => open());
-        menu.Items.Add("Remover aceleração agora", null, (_, _) => fixNow());
-        menu.Items.Add("Reportar problema", null, (_, _) => report());
+        menu.Items.Add(L.T("Abrir MouseFix", "Open MouseFix"), null, (_, _) => open());
+        menu.Items.Add(L.T("Remover aceleração agora", "Remove acceleration now"), null, (_, _) => fixNow());
+        menu.Items.Add(L.T("Reportar problema", "Report a problem"), null, (_, _) => report());
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Sair", null, (_, _) => exit());
+        menu.Items.Add(L.T("Sair", "Exit"), null, (_, _) => exit());
 
         _icon = new Forms.NotifyIcon
         {

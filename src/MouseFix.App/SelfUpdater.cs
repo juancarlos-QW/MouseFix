@@ -11,9 +11,10 @@ namespace MouseFix.App;
 internal static class SelfUpdater
 {
     public const string AfterUpdateArgument = "--after-update";
+    private const string RestartArgument = "--restart";
     private const string OldExeName = "MouseFix.old.exe";
 
-    private static string ExePath => Environment.ProcessPath ?? throw new InvalidOperationException("Caminho do MouseFix desconhecido.");
+    private static string ExePath => Environment.ProcessPath ?? throw new InvalidOperationException(L.T("Caminho do MouseFix desconhecido.", "MouseFix's path is unknown."));
 
     /// <summary>Installed with the installer (it leaves its uninstaller next to the exe), as opposed to the portable exe.</summary>
     public static bool IsInstalled => File.Exists(Path.Combine(Path.GetDirectoryName(ExePath)!, "unins000.exe"));
@@ -27,7 +28,7 @@ internal static class SelfUpdater
         string folder = Path.Combine(Path.GetTempPath(), "MouseFix-update");
         if (IsInstalled)
         {
-            var (file, checksum) = update.Installer ?? throw new InvalidOperationException("Esta versão não tem instalador para baixar.");
+            var (file, checksum) = update.Installer ?? throw new InvalidOperationException(L.T("Esta versão não tem instalador para baixar.", "This version has no installer to download."));
             string installer = Path.Combine(folder, $"MouseFix-Setup-{update.Version.ToString(3)}.exe");
             await UpdateDownloader.DownloadVerifiedAsync(file, checksum, installer, progress, cancellationToken);
             // /SILENT shows only a progress bar; the installer closes this copy if needed and reopens MouseFix at the end.
@@ -36,7 +37,7 @@ internal static class SelfUpdater
         }
         else
         {
-            var (file, checksum) = update.Portable ?? throw new InvalidOperationException("Esta versão não tem o MouseFix.exe portátil para baixar.");
+            var (file, checksum) = update.Portable ?? throw new InvalidOperationException(L.T("Esta versão não tem o MouseFix.exe portátil para baixar.", "This version has no portable MouseFix.exe to download."));
             string exe = ExePath;
             string downloaded = exe + ".new";
             await UpdateDownloader.DownloadVerifiedAsync(file, checksum, downloaded, progress, cancellationToken);
@@ -62,10 +63,19 @@ internal static class SelfUpdater
         }
     }
 
-    /// <summary>Called by the new version at start: waits for the old one to close and removes its leftover file.</summary>
+    /// <summary>Starts a new copy that waits for this one to exit (e.g. to show another language). The caller must exit.</summary>
+    public static void Restart() =>
+        Process.Start(new ProcessStartInfo(ExePath, $"{RestartArgument} {Environment.ProcessId}") { UseShellExecute = false })?.Dispose();
+
+    /// <summary>
+    /// Called at start: after an update or a restart, waits for the old copy to close (it holds the single-instance
+    /// lock) and removes the file an update left behind.
+    /// </summary>
     public static void FinishUpdate(string[] args)
     {
         int index = Array.IndexOf(args, AfterUpdateArgument);
+        if (index < 0)
+            index = Array.IndexOf(args, RestartArgument);
         if (index >= 0 && index + 1 < args.Length && int.TryParse(args[index + 1], out int oldPid))
         {
             try

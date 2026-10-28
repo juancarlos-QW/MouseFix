@@ -17,6 +17,8 @@
 #define AppVersion Str(Major) + "." + Str(Minor) + "." + Str(Patch)
 
 [Setup]
+; Picks Portuguese or English from the Windows language; asks only when neither matches.
+ShowLanguageDialog=auto
 ; Never change AppId: Windows uses it to recognise upgrades of the same app.
 AppId={{C1089291-C759-41EF-9319-17C37C031F5C}
 AppName={#AppName}
@@ -50,6 +52,7 @@ RestartApplications=no
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 ; Checked by default: the desktop shortcut is created unless the user unticks it.

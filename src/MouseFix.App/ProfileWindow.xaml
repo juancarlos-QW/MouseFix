@@ -2,28 +2,29 @@
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="Novo perfil" Width="440" SizeToContent="Height" ResizeMode="NoResize"
+                 xmlns:l="clr-namespace:MouseFix.App"
+                 Title="{l:T 'Novo perfil', En='New profile'}" Width="440" SizeToContent="Height" ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner" Icon="pack://application:,,,/Assets/mousefix.ico"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="None" WindowCornerPreference="Round"
                  Background="{StaticResource MfWindowBackground}">
     <StackPanel>
-        <ui:TitleBar Title="Novo perfil" ShowMaximize="False" ShowMinimize="False" />
+        <ui:TitleBar Title="{l:T 'Novo perfil', En='New profile'}" ShowMaximize="False" ShowMinimize="False" />
 
         <StackPanel Margin="20,4,20,20">
             <TextBlock Style="{StaticResource MfMutedText}"
-                       Text="Quando este programa estiver aberto, o MouseFix usa a velocidade abaixo. Quando fechar, volta para a velocidade padrão. A aceleração fica sempre desligada." />
+                       Text="{l:T 'Quando este programa estiver aberto, o MouseFix usa a velocidade abaixo. Quando fechar, volta para a velocidade padrão. A aceleração fica sempre desligada.', En='While this program is open, MouseFix uses the speed below. When it closes, it goes back to the default speed. Acceleration always stays off.'}" />
 
             <Border Style="{StaticResource MfPanelStyle}" Padding="18,14" Margin="0,14,0,0">
                 <StackPanel>
-                    <TextBlock Text="Programa" Style="{StaticResource MfTitleText}" Margin="0,0,0,8" />
+                    <TextBlock Text="{l:T 'Programa', En='Program'}" Style="{StaticResource MfTitleText}" Margin="0,0,0,8" />
                     <ComboBox x:Name="ProgramBox" IsEditable="True" DisplayMemberPath="Label" />
                     <TextBlock Style="{StaticResource MfMutedText}" FontSize="12" Margin="0,6,0,0"
-                               Text="Escolha um programa aberto ou digite o nome do .exe (ex.: HD-Player)." />
+                               Text="{l:T 'Escolha um programa aberto ou digite o nome do .exe (ex.: HD-Player).', En='Pick an open program or type the .exe name (e.g. HD-Player).'}" />
 
                     <Border Style="{StaticResource MfDividerStyle}" Margin="0,16" />
 
                     <Grid>
-                        <TextBlock Text="Velocidade" Style="{StaticResource MfTitleText}" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T 'Velocidade', En='Speed'}" Style="{StaticResource MfTitleText}" VerticalAlignment="Center" />
                         <TextBlock x:Name="SpeedLabel" Style="{StaticResource MfTitleText}" Foreground="{StaticResource MfAccent}"
                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
@@ -33,8 +34,8 @@
             </Border>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-                <ui:Button Content="Cancelar" IsCancel="True" Click="CancelButton_Click" />
-                <ui:Button Content="Adicionar" Appearance="Primary" IsDefault="True" Margin="8,0,0,0" Click="AddButton_Click" />
+                <ui:Button Content="{l:T 'Cancelar', En='Cancel'}" IsCancel="True" Click="CancelButton_Click" />
+                <ui:Button Content="{l:T 'Adicionar', En='Add'}" Appearance="Primary" IsDefault="True" Margin="8,0,0,0" Click="AddButton_Click" />
             </StackPanel>
         </StackPanel>
     </StackPanel>

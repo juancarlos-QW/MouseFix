@@ -9,14 +9,14 @@ internal static class ProblemReporter
     public static void Open(MouseFixService service, ProtectionMonitor monitor)
     {
         var current = service.Current;
-        string profile = monitor.ActiveProfile is { } p ? $" (perfil \"{p.DisplayName}\")" : "";
-        string mouseState = $"aceleração {(current.IsAccelerationEnabled ? "ligada" : "desligada")}, " +
-                            $"velocidade {current.Speed}/20, escolhida {service.TargetSpeed}/20{profile}";
+        string profile = monitor.ActiveProfile is { } p ? L.T($" (perfil \"{p.DisplayName}\")", $" (profile \"{p.DisplayName}\")") : "";
+        string mouseState = L.T($"aceleração {(current.IsAccelerationEnabled ? "ligada" : "desligada")}, ", $"acceleration {(current.IsAccelerationEnabled ? "on" : "off")}, ") +
+                            L.T($"velocidade {current.Speed}/20, escolhida {service.TargetSpeed}/20{profile}", $"speed {current.Speed}/20, chosen {service.TargetSpeed}/20{profile}");
 
         var emulator = BlueStacksProfiles.Find(BlueStacksProfiles.DefaultRoot).FirstOrDefault();
         string? emulatorText = emulator is null
             ? null
-            : $"{emulator.EmulatorName} · {emulator.GameName} (aceleração do emulador {(emulator.AnyAcceleration ? "ligada" : "desligada")})";
+            : L.T($"{emulator.EmulatorName} · {emulator.GameName} (aceleração do emulador {(emulator.AnyAcceleration ? "ligada" : "desligada")})", $"{emulator.EmulatorName} · {emulator.GameName} (emulator acceleration {(emulator.AnyAcceleration ? "on" : "off")})");
 
         var info = new IssueReportInfo(
             AppVersion: typeof(ProblemReporter).Assembly.GetName().Version?.ToString(3) ?? "?",

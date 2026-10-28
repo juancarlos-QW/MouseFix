@@ -4,23 +4,24 @@ namespace MouseFix.Core;
 public static class SettingsChange
 {
     /// <param name="expectedWord">
-    /// How to label the expected values: "era" (was) for outside changes, "escolhida" (chosen) when an apply didn't take,
-    /// "original" for a restore.
+    /// How to label the expected values: "era" (was) for outside changes, L.T("escolhida", "chosen") (chosen) when an apply didn't take,
+    /// L.T("original", "original") for a restore.
     /// </param>
-    public static string Describe(MouseSettings current, MouseSettings expected, string expectedWord = "era")
+    public static string Describe(MouseSettings current, MouseSettings expected, string? expectedWord = null)
     {
+        expectedWord ??= L.T("era", "was");
         var parts = new List<string>();
         if (current.Acceleration != expected.Acceleration)
-            parts.Add($"aceleração {(current.IsAccelerationEnabled ? "ligada" : "desligada")}");
+            parts.Add(L.T($"aceleração {(current.IsAccelerationEnabled ? "ligada" : "desligada")}", $"acceleration {(current.IsAccelerationEnabled ? "on" : "off")}"));
         if (current.Speed != expected.Speed)
-            parts.Add($"velocidade {current.Speed}/20 ({expectedWord} {expected.Speed}/20)");
+            parts.Add(L.T($"velocidade {current.Speed}/20 ({expectedWord} {expected.Speed}/20)", $"speed {current.Speed}/20 ({expectedWord} {expected.Speed}/20)"));
         if (current.Threshold1 != expected.Threshold1 || current.Threshold2 != expected.Threshold2)
-            parts.Add($"limites de aceleração {current.Threshold1}/{current.Threshold2}");
+            parts.Add(L.T($"limites de aceleração {current.Threshold1}/{current.Threshold2}", $"acceleration thresholds {current.Threshold1}/{current.Threshold2}"));
         if (current.ScrollLines != expected.ScrollLines)
-            parts.Add($"rolagem {current.ScrollLines?.ToString() ?? "?"} linha(s) ({expectedWord} {expected.ScrollLines?.ToString() ?? "?"})");
+            parts.Add(L.T($"rolagem {current.ScrollLines?.ToString() ?? "?"} linha(s) ({expectedWord} {expected.ScrollLines?.ToString() ?? "?"})", $"scrolling {current.ScrollLines?.ToString() ?? "?"} line(s) ({expectedWord} {expected.ScrollLines?.ToString() ?? "?"})"));
         if (!CurvesMatch(current, expected))
-            parts.Add("curvas de aceleração");
-        return parts.Count == 0 ? "nada" : string.Join(", ", parts);
+            parts.Add(L.T("curvas de aceleração", "acceleration curves"));
+        return parts.Count == 0 ? L.T("nada", "nothing") : string.Join(", ", parts);
     }
 
     /// <summary>

@@ -2,6 +2,7 @@
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:l="clr-namespace:MouseFix.App"
                  Title="MouseFix" Width="600" Height="800" MinWidth="520" MinHeight="560" ResizeMode="CanResize"
                  WindowStartupLocation="Manual" Icon="pack://application:,,,/Assets/mousefix.ico"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="None" WindowCornerPreference="Round"
@@ -66,14 +67,14 @@
         <Grid DockPanel.Dock="Top" Margin="14,2,14,0" Height="44">
             <StackPanel x:Name="SubPageHeader" Orientation="Horizontal" Visibility="Collapsed">
                 <ui:Button x:Name="BackButton" Icon="{ui:SymbolIcon ArrowLeft24}" Appearance="Transparent" Click="BackButton_Click"
-                           ToolTip="Voltar" />
+                           ToolTip="{l:T 'Voltar', En='Back'}" />
                 <TextBlock x:Name="PageTitleText" FontSize="20" FontWeight="SemiBold" Foreground="White" Margin="6,0,0,0"
                            VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel x:Name="MainHeaderButtons" Orientation="Horizontal" HorizontalAlignment="Right">
-                <ui:Button x:Name="HistoryButton" Icon="{ui:SymbolIcon History24}" Content="Histórico" Appearance="Transparent"
+                <ui:Button x:Name="HistoryButton" Icon="{ui:SymbolIcon History24}" Content="{l:T 'Histórico', En='History'}" Appearance="Transparent"
                            Click="HistoryButton_Click" />
-                <ui:Button x:Name="SettingsButton" Icon="{ui:SymbolIcon Settings24}" Content="Configurações" Appearance="Transparent"
+                <ui:Button x:Name="SettingsButton" Icon="{ui:SymbolIcon Settings24}" Content="{l:T 'Configurações', En='Settings'}" Appearance="Transparent"
                            Margin="4,0,0,0" Click="SettingsButton_Click" />
             </StackPanel>
         </Grid>
@@ -92,13 +93,13 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="UpdateTitle" Foreground="White" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <ui:Button x:Name="UpdateNowButton" Grid.Column="1" Content="Atualizar agora" Icon="{ui:SymbolIcon ArrowDownload24}"
+                                <ui:Button x:Name="UpdateNowButton" Grid.Column="1" Content="{l:T 'Atualizar agora', En='Update now'}" Icon="{ui:SymbolIcon ArrowDownload24}"
                                            Appearance="Primary" Margin="12,0,0,0" Click="UpdateNowButton_Click" />
                             </Grid>
                             <TextBlock x:Name="UpdateStatus" Style="{StaticResource Muted}" FontSize="13" Margin="0,8,0,0"
-                                       Text="Baixa, confere o arquivo (SHA-256) e instala sozinho. Suas configurações continuam." />
+                                       Text="{l:T 'Baixa, confere o arquivo (SHA-256) e instala sozinho. Suas configurações continuam.', En='Downloads, checks the file (SHA-256) and installs by itself. Your settings are kept.'}" />
                             <ProgressBar x:Name="UpdateProgress" Height="4" Margin="0,8,0,0" Maximum="1" Visibility="Collapsed" />
-                            <ui:Button x:Name="UpdatePageButton" Content="Abrir a página de download" Appearance="Transparent"
+                            <ui:Button x:Name="UpdatePageButton" Content="{l:T 'Abrir a página de download', En='Open the download page'}" Appearance="Transparent"
                                        Foreground="{StaticResource MfAccent}" Margin="-8,4,0,0" Click="UpdateDownloadButton_Click" />
                         </StackPanel>
                     </Border>
@@ -114,11 +115,11 @@
 
                     <!-- The one thing most people need -->
                     <Button x:Name="RemoveAccelButton" Style="{StaticResource MfPrimaryButton}" Height="60" Margin="0,28,0,0"
-                            AutomationProperties.Name="Remover aceleração" Click="RemoveAccelButton_Click"
-                            ToolTip="Desliga toda a aceleração do mouse com um clique">
+                            AutomationProperties.Name="{l:T 'Remover aceleração', En='Remove acceleration'}" Click="RemoveAccelButton_Click"
+                            ToolTip="{l:T 'Desliga toda a aceleração do mouse com um clique', En='Turns off all mouse acceleration with one click'}">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="CursorClick24" FontSize="22" Foreground="White" VerticalAlignment="Center" />
-                            <TextBlock Text="Remover aceleração" FontSize="18" FontWeight="SemiBold" Foreground="White"
+                            <TextBlock Text="{l:T 'Remover aceleração', En='Remove acceleration'}" FontSize="18" FontWeight="SemiBold" Foreground="White"
                                        Margin="10,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -127,7 +128,7 @@
                     <Border Style="{StaticResource MfPanelStyle}" Padding="22,18" Margin="0,24,0,0">
                         <StackPanel>
                             <Grid>
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Velocidade do ponteiro" />
+                                <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Velocidade do ponteiro', En='Pointer speed'}" />
                                 <TextBlock x:Name="SpeedChoiceValue" Style="{StaticResource Muted}" FontSize="15"
                                            HorizontalAlignment="Right" VerticalAlignment="Center" />
                             </Grid>
@@ -140,7 +141,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="SpeedChoiceHint" Style="{StaticResource Muted}" FontSize="13" VerticalAlignment="Center" />
-                                <ui:Button x:Name="SpeedResetButton" Grid.Column="1" Content="Voltar para 1:1" Appearance="Transparent"
+                                <ui:Button x:Name="SpeedResetButton" Grid.Column="1" Content="{l:T 'Voltar para 1:1', En='Back to 1:1'}" Appearance="Transparent"
                                            Foreground="{StaticResource MfAccent}" Margin="8,0,0,0" VerticalAlignment="Center"
                                            Click="SpeedResetButton_Click" />
                             </Grid>
@@ -153,7 +154,7 @@
                             <Grid>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon x:Name="GameModeIcon" Symbol="Flash24" FontSize="22" Filled="True" VerticalAlignment="Center" />
-                                    <TextBlock Style="{StaticResource RowTitle}" Text="Modo jogo" Margin="10,0,0,0" />
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Modo jogo', En='Game mode'}" Margin="10,0,0,0" />
                                 </StackPanel>
                                 <Border x:Name="GameModeChip" HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="10" Padding="10,3">
                                     <TextBlock x:Name="GameModeChipText" FontSize="12" FontWeight="SemiBold" />
@@ -165,7 +166,7 @@
                             <CheckBox x:Name="GameModeAutoCheck" Margin="0,12,0,0"
                                       Checked="GameModeAutoCheck_Changed" Unchecked="GameModeAutoCheck_Changed">
                                 <TextBlock Foreground="White" TextWrapping="Wrap"
-                                           Text="Ativar sozinho quando um emulador abrir (e voltar ao plano normal quando fechar)" />
+                                           Text="{l:T 'Ativar sozinho quando um emulador abrir (e voltar ao plano normal quando fechar)', En='Turn on by itself when an emulator opens (and go back to the normal plan when it closes)'}" />
                             </CheckBox>
                         </StackPanel>
                     </Border>
@@ -177,9 +178,9 @@
                                    VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <ui:Button x:Name="RestoreButton" Content="Restaurar original" Icon="{ui:SymbolIcon ArrowUndo24}" Appearance="Transparent"
+                    <ui:Button x:Name="RestoreButton" Content="{l:T 'Restaurar original', En='Restore original'}" Icon="{ui:SymbolIcon ArrowUndo24}" Appearance="Transparent"
                                HorizontalAlignment="Center" Margin="0,10,0,0" Click="RestoreButton_Click"
-                               ToolTip="Volta as configurações que o seu Windows tinha antes do MouseFix" />
+                               ToolTip="{l:T 'Volta as configurações que o seu Windows tinha antes do MouseFix', En='Brings back the settings your Windows had before MouseFix'}" />
                 </StackPanel>
             </ScrollViewer>
 
@@ -188,15 +189,15 @@
                 <StackPanel Margin="24,8,24,24">
                     <Grid>
                         <TextBlock Style="{StaticResource Muted}" Margin="4,0,120,0" VerticalAlignment="Center"
-                                   Text="O que mudou no mouse, quando, quem mudou e se foi verificado." />
-                        <ui:Button x:Name="ClearHistoryButton" Content="Limpar" Icon="{ui:SymbolIcon Delete24}" Appearance="Transparent"
+                                   Text="{l:T 'O que mudou no mouse, quando, quem mudou e se foi verificado.', En='What changed in the mouse, when, who changed it and whether it was verified.'}" />
+                        <ui:Button x:Name="ClearHistoryButton" Content="{l:T 'Limpar', En='Clear'}" Icon="{ui:SymbolIcon Delete24}" Appearance="Transparent"
                                    HorizontalAlignment="Right" Click="ClearHistoryButton_Click" />
                     </Grid>
                     <Border Style="{StaticResource MfPanelStyle}" Padding="18,10" Margin="0,12,0,0">
                         <StackPanel>
                             <StackPanel x:Name="HistoryList" />
                             <TextBlock x:Name="HistoryEmpty" Style="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,18"
-                                       Text="Nenhuma alteração registrada ainda." />
+                                       Text="{l:T 'Nenhuma alteração registrada ainda.', En='No changes recorded yet.'}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -205,12 +206,12 @@
             <!-- ================= Settings ================= -->
             <ScrollViewer x:Name="PageSettings" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                 <StackPanel Margin="24,0,24,24">
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="GERAL" Margin="4,4,0,8" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'GERAL', En='GENERAL'}" Margin="4,4,0,8" />
                     <ui:CardControl Icon="{ui:SymbolIcon ShieldCheckmark24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Proteção automática" />
-                                <TextBlock Style="{StaticResource Muted}" Text="Desfaz em até 0,1 s qualquer programa que mude a aceleração ou a velocidade" />
+                                <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Proteção automática', En='Automatic protection'}" />
+                                <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Desfaz em até 0,1 s qualquer programa que mude a aceleração ou a velocidade', En='Undoes within 0.1 s any program that changes the acceleration or the speed'}" />
                             </StackPanel>
                         </ui:CardControl.Header>
                         <ui:ToggleSwitch x:Name="AutoReapplyToggle" Click="AutoReapplyToggle_Click" />
@@ -218,8 +219,8 @@
                     <ui:CardControl Margin="0,4,0,0" Icon="{ui:SymbolIcon Power24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Iniciar com o Windows" />
-                                <TextBlock Style="{StaticResource Muted}" Text="Abre minimizado na bandeja ao ligar o PC" />
+                                <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Iniciar com o Windows', En='Start with Windows'}" />
+                                <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Abre minimizado na bandeja ao ligar o PC', En='Opens minimized in the tray when the PC starts'}" />
                             </StackPanel>
                         </ui:CardControl.Header>
                         <ui:ToggleSwitch x:Name="AutoStartToggle" Click="AutoStartToggle_Click" />
@@ -227,18 +228,31 @@
                     <ui:CardControl Margin="0,4,0,0" Icon="{ui:SymbolIcon ArrowSync24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Avisar quando sair versão nova" />
-                                <TextBlock Style="{StaticResource Muted}" Text="Consulta o GitHub uma vez por dia (único acesso à internet)" />
+                                <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Avisar quando sair versão nova', En='Tell me when a new version is out'}" />
+                                <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Consulta o GitHub uma vez por dia (único acesso à internet)', En='Checks GitHub once a day (its only internet access)'}" />
                             </StackPanel>
                         </ui:CardControl.Header>
                         <ui:ToggleSwitch x:Name="UpdateCheckToggle" Click="UpdateCheckToggle_Click" />
                     </ui:CardControl>
+                    <ui:CardControl Margin="0,4,0,0" Icon="{ui:SymbolIcon LocalLanguage24}">
+                        <ui:CardControl.Header>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RowTitle}" Text="Idioma / Language" />
+                                <TextBlock Style="{StaticResource Muted}" Text="{l:T 'O MouseFix reabre no idioma escolhido', En='MouseFix reopens in the chosen language'}" />
+                            </StackPanel>
+                        </ui:CardControl.Header>
+                        <ComboBox x:Name="LanguageBox" MinWidth="170" SelectionChanged="LanguageBox_SelectionChanged">
+                            <ComboBoxItem Tag="" Content="{l:T 'Automático (Windows)', En='Automatic (Windows)'}" />
+                            <ComboBoxItem Tag="pt" Content="Português" />
+                            <ComboBoxItem Tag="en" Content="English" />
+                        </ComboBox>
+                    </ui:CardControl>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="AVANÇADO" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'AVANÇADO', En='ADVANCED'}" />
                     <ui:CardControl Icon="{ui:SymbolIcon Warning24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Aceleração do mouse" />
+                                <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Aceleração do mouse', En='Mouse acceleration'}" />
                                 <TextBlock x:Name="AccelHint" Style="{StaticResource Muted}" />
                             </StackPanel>
                         </ui:CardControl.Header>
@@ -247,7 +261,7 @@
                     <ui:CardControl Margin="0,4,0,0" Icon="{ui:SymbolIcon TextLineSpacing24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Velocidade de rolagem" />
+                                <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Velocidade de rolagem', En='Scroll speed'}" />
                                 <TextBlock x:Name="ScrollValue" Style="{StaticResource Muted}" />
                             </StackPanel>
                         </ui:CardControl.Header>
@@ -260,22 +274,22 @@
                         </Border>
                     </ui:CardControl>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="PERFIS POR PROGRAMA" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'PERFIS POR PROGRAMA', En='PER-PROGRAM PROFILES'}" />
                     <Border Style="{StaticResource MfPanelStyle}" Padding="18,14">
                         <StackPanel>
                             <Grid>
                                 <TextBlock x:Name="ProfilesHint" Style="{StaticResource Muted}" Margin="0,0,12,0" />
                             </Grid>
                             <StackPanel x:Name="ProfilesList" Margin="0,10,0,0" />
-                            <TextBlock x:Name="ProfilesEmpty" Style="{StaticResource Muted}" Margin="0,4,0,0" Text="Nenhum perfil ainda." />
-                            <ui:Button Content="Adicionar programa" Icon="{ui:SymbolIcon Add24}" Margin="0,12,0,0" Click="AddProfileButton_Click" />
+                            <TextBlock x:Name="ProfilesEmpty" Style="{StaticResource Muted}" Margin="0,4,0,0" Text="{l:T 'Nenhum perfil ainda.', En='No profiles yet.'}" />
+                            <ui:Button Content="{l:T 'Adicionar programa', En='Add program'}" Icon="{ui:SymbolIcon Add24}" Margin="0,12,0,0" Click="AddProfileButton_Click" />
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="EMULADOR" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'EMULADOR', En='EMULATOR'}" />
                     <Border x:Name="EmulatorEmpty" Style="{StaticResource MfPanelStyle}" Padding="18,14">
                         <TextBlock Style="{StaticResource Muted}"
-                                   Text="Nenhum emulador compatível encontrado (MSI App Player ou BlueStacks 5 com Free Fire / Free Fire MAX)." />
+                                   Text="{l:T 'Nenhum emulador compatível encontrado (MSI App Player ou BlueStacks 5 com Free Fire / Free Fire MAX).', En='No supported emulator found (MSI App Player or BlueStacks 5 with Free Fire / Free Fire MAX).'}" />
                     </Border>
                     <Border x:Name="EmulatorCard" Style="{StaticResource MfPanelStyle}" Padding="18,14" Visibility="Collapsed">
                         <StackPanel>
@@ -290,19 +304,19 @@
                                     <RowDefinition />
                                     <RowDefinition />
                                 </Grid.RowDefinitions>
-                                <TextBlock Style="{StaticResource Muted}" Text="Aceleração do emulador" />
+                                <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Aceleração do emulador', En='Emulator acceleration'}" />
                                 <TextBlock x:Name="EmulatorAccelValue" Grid.Column="1" Foreground="White" FontWeight="SemiBold" />
-                                <TextBlock Grid.Row="1" Style="{StaticResource Muted}" Text="Esquema de controles" Margin="0,6,0,0" />
+                                <TextBlock Grid.Row="1" Style="{StaticResource Muted}" Text="{l:T 'Esquema de controles', En='Control scheme'}" Margin="0,6,0,0" />
                                 <TextBlock x:Name="EmulatorSchemeValue" Grid.Row="1" Grid.Column="1" Foreground="White" FontWeight="SemiBold" Margin="0,6,0,0" />
-                                <TextBlock Grid.Row="2" Style="{StaticResource Muted}" Text="Sensibilidade da mira (X / Y)" Margin="0,6,0,0" />
+                                <TextBlock Grid.Row="2" Style="{StaticResource Muted}" Text="{l:T 'Sensibilidade da mira (X / Y)', En='Aim sensitivity (X / Y)'}" Margin="0,6,0,0" />
                                 <TextBlock x:Name="EmulatorSensValue" Grid.Row="2" Grid.Column="1" Foreground="White" FontWeight="SemiBold" Margin="0,6,0,0" />
                             </Grid>
                             <TextBlock x:Name="EmulatorAdvice" Style="{StaticResource Muted}" Margin="0,12,0,0" />
                             <WrapPanel Margin="0,12,0,0">
-                                <ui:Button x:Name="EmulatorTestButton" Content="Testar emulador" Icon="{ui:SymbolIcon Beaker24}"
+                                <ui:Button x:Name="EmulatorTestButton" Content="{l:T 'Testar emulador', En='Test emulator'}" Icon="{ui:SymbolIcon Beaker24}"
                                            Margin="0,0,8,4" Click="EmulatorTestButton_Click" />
                                 <ui:Button x:Name="EmulatorSensButton" Appearance="Primary" Margin="0,0,8,4" Click="EmulatorSensButton_Click" />
-                                <ui:Button x:Name="EmulatorFixButton" Content="Desligar aceleração do emulador" Icon="{ui:SymbolIcon Checkmark24}"
+                                <ui:Button x:Name="EmulatorFixButton" Content="{l:T 'Desligar aceleração do emulador', En='Turn off emulator acceleration'}" Icon="{ui:SymbolIcon Checkmark24}"
                                            Appearance="Primary" Margin="0,0,8,4" Click="EmulatorFixButton_Click" />
                             </WrapPanel>
                         </StackPanel>
@@ -316,28 +330,28 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="TESTES" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'TESTES', En='TESTS'}" />
                     <ui:InfoBar x:Name="MouseSoftwareInfo" Margin="0,0,0,6" Severity="Warning" IsClosable="False" />
                     <ui:CardAction Icon="{ui:SymbolIcon CursorClick24}" Click="TestButton_Click">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource RowTitle}" Text="Precisão do Windows" />
-                            <TextBlock Style="{StaticResource Muted}" Text="Compara o sensor com o cursor e mostra se está 1:1" />
+                            <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Precisão do Windows', En='Windows precision'}" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Compara o sensor com o cursor e mostra se está 1:1', En='Compares the sensor with the cursor and shows whether it is 1:1'}" />
                         </StackPanel>
                     </ui:CardAction>
                     <ui:CardAction Icon="{ui:SymbolIcon Ruler24}" Margin="0,4,0,0" Click="DistanceTestButton_Click">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource RowTitle}" Text="Distância (mouse e driver)" />
-                            <TextBlock Style="{StaticResource Muted}" Text="Mostra aceleração no mouse ou no driver, o DPI real e o polling rate" />
+                            <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Distância (mouse e driver)', En='Distance (mouse and driver)'}" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Mostra aceleração no mouse ou no driver, o DPI real e o polling rate', En='Shows acceleration in the mouse or its driver, the real DPI and the polling rate'}" />
                         </StackPanel>
                     </ui:CardAction>
                     <ui:CardAction Icon="{ui:SymbolIcon Calculator24}" Margin="0,4,0,0" Click="SensitivityButton_Click">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource RowTitle}" Text="Calculadora de sensibilidade" />
-                            <TextBlock Style="{StaticResource Muted}" Text="eDPI, cm para atravessar a tela e como trocar de DPI sem mudar a sensação" />
+                            <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Calculadora de sensibilidade', En='Sensitivity calculator'}" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'eDPI, cm para atravessar a tela e como trocar de DPI sem mudar a sensação', En='eDPI, cm to cross the screen and how to change DPI without changing the feel'}" />
                         </StackPanel>
                     </ui:CardAction>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="SITUAÇÃO ATUAL DO WINDOWS" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'SITUAÇÃO ATUAL DO WINDOWS', En='CURRENT WINDOWS STATE'}" />
                     <Border Style="{StaticResource MfPanelStyle}" Padding="18,14">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -350,37 +364,37 @@
                                 <RowDefinition />
                                 <RowDefinition />
                             </Grid.RowDefinitions>
-                            <TextBlock Style="{StaticResource Muted}" Text="Aceleração (aumentar precisão do ponteiro)" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Aceleração (aumentar precisão do ponteiro)', En='Acceleration (enhance pointer precision)'}" />
                             <TextBlock x:Name="AccelValue" Grid.Column="1" Foreground="White" FontWeight="SemiBold" />
-                            <TextBlock Grid.Row="1" Style="{StaticResource Muted}" Text="Velocidade do ponteiro" Margin="0,6,0,0" />
+                            <TextBlock Grid.Row="1" Style="{StaticResource Muted}" Text="{l:T 'Velocidade do ponteiro', En='Pointer speed'}" Margin="0,6,0,0" />
                             <TextBlock x:Name="SpeedValue" Grid.Row="1" Grid.Column="1" Foreground="White" FontWeight="SemiBold" Margin="0,6,0,0" />
-                            <TextBlock Grid.Row="2" Style="{StaticResource Muted}" Text="Linhas por giro da roda" Margin="0,6,0,0" />
+                            <TextBlock Grid.Row="2" Style="{StaticResource Muted}" Text="{l:T 'Linhas por giro da roda', En='Lines per wheel notch'}" Margin="0,6,0,0" />
                             <TextBlock x:Name="ScrollCurrentValue" Grid.Row="2" Grid.Column="1" Foreground="White" FontWeight="SemiBold" Margin="0,6,0,0" />
-                            <TextBlock Grid.Row="3" Style="{StaticResource Muted}" Text="Curvas de proteção" Margin="0,6,0,0" />
+                            <TextBlock Grid.Row="3" Style="{StaticResource Muted}" Text="{l:T 'Curvas de proteção', En='Protection curves'}" Margin="0,6,0,0" />
                             <TextBlock x:Name="CurvesValue" Grid.Row="3" Grid.Column="1" Foreground="White" FontWeight="SemiBold" Margin="0,6,0,0" />
                         </Grid>
                     </Border>
                     <ui:InfoBar x:Name="LoginInfo" Margin="0,6,0,0" Severity="Informational" IsClosable="False"
-                                Title="Faça logoff uma vez"
-                                Message="As curvas de proteção só passam a valer depois de sair da conta do Windows e entrar de novo." />
+                                Title="{l:T 'Faça logoff uma vez', En='Sign out once'}"
+                                Message="{l:T 'As curvas de proteção só passam a valer depois de sair da conta do Windows e entrar de novo.', En='The protection curves only take effect after you sign out of Windows and sign back in.'}" />
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="AJUDA" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{l:T 'AJUDA', En='HELP'}" />
                     <ui:CardAction Icon="{ui:SymbolIcon Bug24}" Click="ReportButton_Click">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource RowTitle}" Text="Reportar problema" />
-                            <TextBlock Style="{StaticResource Muted}" Text="Abre o GitHub com um relatório preenchido; você revisa antes de enviar" />
+                            <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Reportar problema', En='Report a problem'}" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Abre o GitHub com um relatório preenchido; você revisa antes de enviar', En='Opens GitHub with a filled-in report; you review it before sending'}" />
                         </StackPanel>
                     </ui:CardAction>
                     <ui:CardAction Icon="{ui:SymbolIcon Folder24}" Margin="0,4,0,0" Click="LogFolderButton_Click">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource RowTitle}" Text="Abrir pasta de logs" />
-                            <TextBlock Style="{StaticResource Muted}" Text="Backup, configurações, histórico e registro" />
+                            <TextBlock Style="{StaticResource RowTitle}" Text="{l:T 'Abrir pasta de logs', En='Open log folder'}" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Backup, configurações, histórico e registro', En='Backup, settings, history and log'}" />
                         </StackPanel>
                     </ui:CardAction>
                     <ui:CardAction Icon="{ui:SymbolIcon Info24}" Margin="0,4,0,0" Click="GitHubButton_Click">
                         <StackPanel>
                             <TextBlock x:Name="AboutText" Style="{StaticResource RowTitle}" />
-                            <TextBlock Style="{StaticResource Muted}" Text="Grátis e de código aberto (MIT). Abrir a página do projeto" />
+                            <TextBlock Style="{StaticResource Muted}" Text="{l:T 'Grátis e de código aberto (MIT). Abrir a página do projeto', En='Free and open source (MIT). Open the project page'}" />
                         </StackPanel>
                     </ui:CardAction>
                 </StackPanel>

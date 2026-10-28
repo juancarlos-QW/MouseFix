@@ -142,17 +142,17 @@ public partial class PrecisionTestWindow : FluentWindow
         (SymbolRegular icon, string brush, string title, string subtitle) = _analyzer.Verdict switch
         {
             AccelerationVerdict.OneToOne => (SymbolRegular.CheckmarkCircle24, "MfSuccess",
-                "1:1 confirmado: sem aceleração",
-                "Cada ponto lido pelo sensor move o cursor exatamente 1 pixel, em qualquer velocidade."),
+                L.T("1:1 confirmado: sem aceleração", "1:1 confirmed: no acceleration"),
+                L.T("Cada ponto lido pelo sensor move o cursor exatamente 1 pixel, em qualquer velocidade.", "Each count read by the sensor moves the cursor exactly 1 pixel, at any speed.")),
             AccelerationVerdict.Scaled => (SymbolRegular.Warning24, "MfWarning",
-                $"Sem aceleração, mas o cursor anda {_analyzer.OverallRatio:0.00}x",
-                "A relação é constante, então não há aceleração. Não é 1:1 porque a velocidade não está em 10/20, o que é normal se você escolheu outra velocidade."),
+                L.T($"Sem aceleração, mas o cursor anda {_analyzer.OverallRatio:0.00}x", $"No acceleration, but the cursor moves {_analyzer.OverallRatio:0.00}x"),
+                L.T("A relação é constante, então não há aceleração. Não é 1:1 porque a velocidade não está em 10/20, o que é normal se você escolheu outra velocidade.", "The ratio is constant, so there is no acceleration. It isn't 1:1 because the speed isn't 10/20, which is normal if you chose another speed.")),
             AccelerationVerdict.Accelerated => (SymbolRegular.DismissCircle24, "MfDanger",
-                $"Aceleração detectada: {_analyzer.Spread:0.0}x mais rápido em movimentos rápidos",
-                "O cursor anda mais por ponto quando a mão vai rápido. Verifique o MouseFix e o software do fabricante do mouse."),
+                L.T($"Aceleração detectada: {_analyzer.Spread:0.0}x mais rápido em movimentos rápidos", $"Acceleration detected: {_analyzer.Spread:0.0}x faster on fast moves"),
+                L.T("O cursor anda mais por ponto quando a mão vai rápido. Verifique o MouseFix e o software do fabricante do mouse.", "The cursor moves further per count when your hand moves fast. Check MouseFix and the mouse maker's software.")),
             _ => (SymbolRegular.Gauge24, "MfTextMuted",
-                "Coletando dados…",
-                $"Faça movimentos lentos e rápidos até ter pelo menos {AccelerationAnalyzer.MinSamplesPerBucket} amostras em uma linha lenta e em uma rápida."),
+                L.T("Coletando dados…", "Collecting data…"),
+                L.T($"Faça movimentos lentos e rápidos até ter pelo menos {AccelerationAnalyzer.MinSamplesPerBucket} amostras em uma linha lenta e em uma rápida.", $"Make slow and fast moves until there are at least {AccelerationAnalyzer.MinSamplesPerBucket} samples in a slow row and in a fast one.")),
         };
 
         VerdictIcon.Symbol = icon;

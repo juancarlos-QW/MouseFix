@@ -4,14 +4,14 @@ namespace MouseFix.Core;
 public sealed record PowerSetting(string Description, Guid Subgroup, Guid Setting, uint Value);
 
 /// <summary>
-/// "Modo jogo": a "MouseFix Jogo" power plan made from Windows' High performance plan and tuned for games
+/// L.T("Modo jogo", "Game mode"): a "MouseFix Jogo" power plan made from Windows' High performance plan and tuned for games
 /// (CPU always at full speed, no core parking, aggressive boost, no USB/PCIe power saving, no sleep).
 /// Activating remembers the plan that was active; deactivating goes back to it.
 /// </summary>
 public sealed class GameModeService
 {
     public const string PlanName = "MouseFix Jogo";
-    private const string PlanDescription = "Criado pelo MouseFix: desempenho máximo para jogos e emuladores.";
+    private static string PlanDescription => L.T("Criado pelo MouseFix: desempenho máximo para jogos e emuladores.", "Made by MouseFix: maximum performance for games and emulators.");
 
     public static readonly Guid HighPerformance = new("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
     public static readonly Guid Balanced = new("381b4222-f694-41f0-9685-ff5bb260df2e");
@@ -23,17 +23,17 @@ public sealed class GameModeService
     private static readonly Guid SubSleep = new("238c9fa8-0aad-41ed-83f4-97be242c8f20");
 
     /// <summary>The tuning applied to the game plan (checked on this PC with powercfg, no administrator needed).</summary>
-    public static readonly IReadOnlyList<PowerSetting> Settings =
+    public static IReadOnlyList<PowerSetting> Settings =>
     [
-        new("Processador mínimo em 100%", SubProcessor, new("893dee8e-2bef-41e0-89c6-b55d0929964c"), 100),
-        new("Processador máximo em 100%", SubProcessor, new("bc5038f7-23e0-4960-96da-33abaf5935ec"), 100),
-        new("Sem estacionamento de núcleos", SubProcessor, new("0cc5b647-c1df-4637-891a-dec35c318583"), 100),
-        new("Turbo agressivo", SubProcessor, new("be337238-0d82-4146-a960-4f3749d470c7"), 2),
-        new("USB sem economia de energia", SubUsb, new("48e6b7a6-50f5-4782-a5d4-53bb8f07e226"), 0),
-        new("PCIe sem economia de energia", SubPciExpress, new("ee12f906-d277-404b-b6da-e5fa1a576df5"), 0),
-        new("Disco nunca desliga", SubDisk, new("6738e2c4-e8a5-4a42-b16a-e040e769756e"), 0),
-        new("PC nunca suspende", SubSleep, new("29f6c1db-86da-48c5-9fdb-f2b67b1f44da"), 0),
-        new("PC nunca hiberna", SubSleep, new("9d7815a6-7ee4-497e-8888-515a05f02364"), 0),
+        new(L.T("Processador mínimo em 100%", "Minimum processor at 100%"), SubProcessor, new("893dee8e-2bef-41e0-89c6-b55d0929964c"), 100),
+        new(L.T("Processador máximo em 100%", "Maximum processor at 100%"), SubProcessor, new("bc5038f7-23e0-4960-96da-33abaf5935ec"), 100),
+        new(L.T("Sem estacionamento de núcleos", "No core parking"), SubProcessor, new("0cc5b647-c1df-4637-891a-dec35c318583"), 100),
+        new(L.T("Turbo agressivo", "Aggressive boost"), SubProcessor, new("be337238-0d82-4146-a960-4f3749d470c7"), 2),
+        new(L.T("USB sem economia de energia", "USB without power saving"), SubUsb, new("48e6b7a6-50f5-4782-a5d4-53bb8f07e226"), 0),
+        new(L.T("PCIe sem economia de energia", "PCIe without power saving"), SubPciExpress, new("ee12f906-d277-404b-b6da-e5fa1a576df5"), 0),
+        new(L.T("Disco nunca desliga", "Disk never turns off"), SubDisk, new("6738e2c4-e8a5-4a42-b16a-e040e769756e"), 0),
+        new(L.T("PC nunca suspende", "PC never sleeps"), SubSleep, new("29f6c1db-86da-48c5-9fdb-f2b67b1f44da"), 0),
+        new(L.T("PC nunca hiberna", "PC never hibernates"), SubSleep, new("9d7815a6-7ee4-497e-8888-515a05f02364"), 0),
     ];
 
     private readonly IPowerPlans _plans;
@@ -92,7 +92,7 @@ public sealed class GameModeService
         }
         _settings.GameModeAutomatic = automatic;
         _save();
-        return _plans.GetActive() == plan ? null : "o Windows não ativou o plano MouseFix Jogo";
+        return _plans.GetActive() == plan ? null : L.T("o Windows não ativou o plano MouseFix Jogo", "Windows didn't turn on the MouseFix Jogo plan");
     }
 
     /// <summary>
@@ -111,7 +111,7 @@ public sealed class GameModeService
         _settings.PowerPlanBeforeGame = null;
         _settings.GameModeAutomatic = false;
         _save();
-        return _plans.GetActive() == previous ? null : "o Windows não voltou ao plano anterior";
+        return _plans.GetActive() == previous ? null : L.T("o Windows não voltou ao plano anterior", "Windows didn't go back to the previous plan");
     }
 
     /// <summary>Used when uninstalling: leaves game mode and removes the game plan from Windows.</summary>

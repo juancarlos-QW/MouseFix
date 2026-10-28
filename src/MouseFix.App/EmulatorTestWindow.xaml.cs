@@ -53,7 +53,7 @@ public partial class EmulatorTestWindow : FluentWindow
         ApplyPhase();
         _timer.Start();
 
-        StartStopButton.Content = "Parar teste";
+        StartStopButton.Content = L.T("Parar teste", "Stop test");
         StartStopButton.Icon = new SymbolIcon(SymbolRegular.Stop24);
     }
 
@@ -67,9 +67,9 @@ public partial class EmulatorTestWindow : FluentWindow
         _before = null;
         _monitor.Paused = false;
 
-        PhaseText.Text = "Parado";
-        PhaseSubtext.Text = "Velocidade original restaurada.";
-        StartStopButton.Content = "Iniciar teste";
+        PhaseText.Text = L.T("Parado", "Stopped");
+        PhaseSubtext.Text = L.T("Velocidade original restaurada.", "Original speed restored.");
+        StartStopButton.Content = L.T("Iniciar teste", "Start test");
         StartStopButton.Icon = new SymbolIcon(SymbolRegular.Play24);
     }
 
@@ -91,8 +91,8 @@ public partial class EmulatorTestWindow : FluentWindow
         int halfSpeed = MouseSettings.SpeedForMultiplier(MouseSettings.SpeedMultiplier(normal.Speed) / 2);
         _service.Apply(_half ? normal with { Speed = halfSpeed } : normal);
 
-        PhaseText.Text = _half ? "Agora: metade da velocidade" : "Agora: velocidade normal";
-        PhaseSubtext.Text = _half ? "Bipe grave" : "Bipe agudo";
+        PhaseText.Text = _half ? L.T("Agora: metade da velocidade", "Now: half speed") : L.T("Agora: velocidade normal", "Now: normal speed");
+        PhaseSubtext.Text = _half ? L.T("Bipe grave", "Low beep") : L.T("Bipe agudo", "High beep");
 
         int frequency = _half ? 440 : 1320;
         // Console.Beep blocks while it plays, so keep it off the UI thread.

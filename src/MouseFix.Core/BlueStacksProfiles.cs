@@ -138,10 +138,10 @@ public static partial class BlueStacksProfiles
     /// </summary>
     public static int SetSelectedSensitivity(string file, double sensitivity)
     {
-        var root = JsonNode.Parse(File.ReadAllText(file)) ?? throw new InvalidDataException("Arquivo de controles vazio.");
+        var root = JsonNode.Parse(File.ReadAllText(file)) ?? throw new InvalidDataException(L.T("Arquivo de controles vazio.", "The controls file is empty."));
         var scheme = (root["ControlSchemes"]?.AsArray() ?? [])
             .FirstOrDefault(s => (bool?)s?["Selected"] == true)
-            ?? throw new InvalidDataException("Nenhum esquema de controles selecionado.");
+            ?? throw new InvalidDataException(L.T("Nenhum esquema de controles selecionado.", "No control scheme is selected."));
 
         int changed = 0;
         foreach (var control in scheme["GameControls"]?.AsArray() ?? [])

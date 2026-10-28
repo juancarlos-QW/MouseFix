@@ -84,7 +84,7 @@ public partial class ProfileWindow : FluentWindow
         string name = SpeedProfiles.NormalizeProcessName(picked?.ProcessName ?? ProgramBox.Text ?? "");
         if (name.Length == 0)
         {
-            System.Windows.MessageBox.Show(this, "Escolha ou digite o programa.", "Novo perfil",
+            System.Windows.MessageBox.Show(this, L.T("Escolha ou digite o programa.", "Pick or type the program."), L.T("Novo perfil", "New profile"),
                 System.Windows.MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

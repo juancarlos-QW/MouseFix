@@ -76,8 +76,8 @@ public sealed class ProtectionMonitor
         bool turningOn = !_gameMode.IsActive;
         string? problem = turningOn ? _gameMode.Activate(automatic: false) : _gameMode.Deactivate();
         RecordGameMode(ChangeSource.User, turningOn
-            ? $"Modo jogo ligado (plano {GameModeService.PlanName})"
-            : $"Modo jogo desligado (plano {_gameMode.ActivePlanName})", problem);
+            ? L.T($"Modo jogo ligado (plano {GameModeService.PlanName})", $"Game mode on (plan {GameModeService.PlanName})")
+            : L.T($"Modo jogo desligado (plano {_gameMode.ActivePlanName})", $"Game mode off (plan {_gameMode.ActivePlanName})"), problem);
         UpdateEmulatorPriority();
         GameModeChanged?.Invoke(this, EventArgs.Empty);
         return problem;
@@ -102,12 +102,12 @@ public sealed class ProtectionMonitor
                         {
                             p.PriorityClass = ProcessPriorityClass.High;
                             _raisedPriority.Add(p.Id);
-                            RecordGameMode(ChangeSource.GameMode, $"Prioridade do {displayName}: alta", null);
+                            RecordGameMode(ChangeSource.GameMode, L.T($"Prioridade do {displayName}: alta", $"{displayName} priority: high"), null);
                         }
                         else if (!raise && _raisedPriority.Remove(p.Id) && p.PriorityClass == ProcessPriorityClass.High)
                         {
                             p.PriorityClass = ProcessPriorityClass.Normal;
-                            RecordGameMode(ChangeSource.GameMode, $"Prioridade do {displayName}: normal", null);
+                            RecordGameMode(ChangeSource.GameMode, L.T($"Prioridade do {displayName}: normal", $"{displayName} priority: normal"), null);
                         }
                     }
                     catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
@@ -124,7 +124,7 @@ public sealed class ProtectionMonitor
     private void RecordGameMode(ChangeSource source, string description, string? problem)
     {
         if (problem is null && _gameMode.Unsupported.Count > 0 && _gameMode.IsActive)
-            description += $". Este PC não tem: {string.Join(", ", _gameMode.Unsupported).ToLowerInvariant()}";
+            description += L.T($". Este PC não tem: {string.Join(", ", _gameMode.Unsupported).ToLowerInvariant()}", $". This PC doesn't have: {string.Join(", ", _gameMode.Unsupported).ToLowerInvariant()}");
         _history.Add(new ChangeEntry(DateTime.Now, source, description, problem is null, problem));
         Log.Info(problem is null ? description : $"{description} — falhou: {problem}");
     }
@@ -141,7 +141,7 @@ public sealed class ProtectionMonitor
         // MouseFix restarted (or crashed) after turning game mode on for an emulator that is now closed.
         if (firstCheck && !isRunning && _gameMode.ActivatedAutomatically)
         {
-            RecordGameMode(ChangeSource.GameMode, "Modo jogo desligado (o emulador já tinha fechado)", _gameMode.Deactivate());
+            RecordGameMode(ChangeSource.GameMode, L.T("Modo jogo desligado (o emulador já tinha fechado)", "Game mode off (the emulator had already closed)"), _gameMode.Deactivate());
             GameModeChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
@@ -155,7 +155,7 @@ public sealed class ProtectionMonitor
             EnsureDedicatedGpu(emulator!, name);
             if (_gameModeWithEmulator() && !_gameMode.IsActive)
             {
-                RecordGameMode(ChangeSource.GameMode, $"Modo jogo ligado ({name} aberto)", _gameMode.Activate(automatic: true));
+                RecordGameMode(ChangeSource.GameMode, L.T($"Modo jogo ligado ({name} aberto)", $"Game mode on ({name} open)"), _gameMode.Activate(automatic: true));
                 GameModeChanged?.Invoke(this, EventArgs.Empty);
             }
             UpdateEmulatorPriority();
@@ -165,7 +165,7 @@ public sealed class ProtectionMonitor
             _raisedPriority.Clear();
             if (_gameMode.ActivatedAutomatically)
             {
-                RecordGameMode(ChangeSource.GameMode, "Modo jogo desligado (emulador fechado)", _gameMode.Deactivate());
+                RecordGameMode(ChangeSource.GameMode, L.T("Modo jogo desligado (emulador fechado)", "Game mode off (emulator closed)"), _gameMode.Deactivate());
                 GameModeChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -183,7 +183,7 @@ public sealed class ProtectionMonitor
             {
                 var path = processes.FirstOrDefault()?.MainModule?.FileName;
                 if (path is not null && GpuPreference.EnsureHighPerformance(path))
-                    RecordGameMode(ChangeSource.GameMode, $"{displayName} marcado para usar a placa de vídeo de alto desempenho", null);
+                    RecordGameMode(ChangeSource.GameMode, L.T($"{displayName} marcado para usar a placa de vídeo de alto desempenho", $"{displayName} set to use the high-performance graphics card"), null);
             }
             finally
             {
@@ -291,8 +291,8 @@ public sealed class ProtectionMonitor
                 // A profile switch is something the user asked for, so apply it even with automatic protection off.
                 bool applied = _service.EnsureFixed();
                 string description = active is null
-                    ? $"Voltou à velocidade padrão {_service.TargetSpeed}/20"
-                    : $"Perfil \"{active.DisplayName}\": velocidade {active.Speed}/20";
+                    ? L.T($"Voltou à velocidade padrão {_service.TargetSpeed}/20", $"Back to the default speed {_service.TargetSpeed}/20")
+                    : L.T($"Perfil \"{active.DisplayName}\": velocidade {active.Speed}/20", $"Profile \"{active.DisplayName}\": speed {active.Speed}/20");
                 Log.Info(description);
                 if (applied)
                 {
@@ -322,7 +322,7 @@ public sealed class ProtectionMonitor
             string? curvesProblem = _service.VerifyTarget();
             Log.Info("Curvas de proteção atualizadas pelo MouseFix.");
             _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix,
-                "Curvas de proteção atualizadas (valem depois do próximo login)", curvesProblem is null, curvesProblem));
+                L.T("Curvas de proteção atualizadas (valem depois do próximo login)", "Protection curves updated (they take effect after the next sign-in)"), curvesProblem is null, curvesProblem));
             return;
         }
 
@@ -330,10 +330,10 @@ public sealed class ProtectionMonitor
         string what = SettingsChange.Describe(current, expected);
         string who = ForegroundProcessName();
         _service.Apply(expected);
-        LastExternalChange = $"{what} (em primeiro plano: {who})";
+        LastExternalChange = L.T($"{what} (em primeiro plano: {who})", $"{what} (in the foreground: {who})");
         Log.Info($"Mudança externa no mouse: {LastExternalChange}. Configuração do MouseFix reaplicada.");
         string? problem = _service.VerifyTarget();
-        _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.OtherProgram, $"Outro programa mudou: {what}. Desfeito.",
+        _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.OtherProgram, L.T($"Outro programa mudou: {what}. Desfeito.", $"Another program changed: {what}. Undone."),
             problem is null, problem, who));
         Reapplied?.Invoke(this, EventArgs.Empty);
         TrackFight(who);
@@ -361,13 +361,13 @@ public sealed class ProtectionMonitor
             GetWindowThreadProcessId(GetForegroundWindow(), out uint pid);
             // With MouseFix itself in front, the program that made the change ran in the background: don't blame ourselves.
             if (pid == 0 || pid == Environment.ProcessId)
-                return "não identificado (em segundo plano)";
+                return L.T("não identificado (em segundo plano)", "unidentified (in the background)");
             using var process = Process.GetProcessById((int)pid);
             return process.ProcessName;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            return "desconhecido";
+            return L.T("desconhecido", "unknown");
         }
     }
 

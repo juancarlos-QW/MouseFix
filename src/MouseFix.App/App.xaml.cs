@@ -100,6 +100,7 @@ public partial class App : Application
 
         bool firstRun = !File.Exists(AppSettings.DefaultPath);
         var settings = _settings = AppSettings.Load(AppSettings.DefaultPath);
+        L.Use(settings.Language);
         ProtectionMonitor? monitor = null;
         var store = new WindowsMouseSettingsStore();
         // A new user starts from the speed Windows already has, so "Remover aceleração" never changes how fast the
@@ -121,20 +122,25 @@ public partial class App : Application
         monitor.GameModeChanged += (_, _) =>
         {
             _window.Refresh();
-            _tray?.Notify("Modo jogo", gameMode.IsActive
-                ? $"Plano de energia \"{GameModeService.PlanName}\" ativado: desempenho máximo."
-                : $"Plano de energia de volta para \"{gameMode.ActivePlanName}\".");
+            _tray?.Notify(L.T("Modo jogo", "Game mode"), gameMode.IsActive
+                ? L.T($"Plano de energia \"{GameModeService.PlanName}\" ativado: desempenho máximo.", $"Power plan \"{GameModeService.PlanName}\" on: maximum performance.")
+                : L.T($"Plano de energia de volta para \"{gameMode.ActivePlanName}\".", $"Power plan back to \"{gameMode.ActivePlanName}\"."));
         };
         monitor.FightDetected += (_, program) => _tray?.Notify(
-            "Um programa está mudando o seu mouse",
-            $"\"{program}\" mudou a aceleração ou a velocidade várias vezes no último minuto. O MouseFix desfez todas, " +
-            "mas se a mira oscilar, procure a opção de mouse nesse programa.");
+            L.T("Um programa está mudando o seu mouse", "A program keeps changing your mouse"),
+            L.T($"\"{program}\" mudou a aceleração ou a velocidade várias vezes no último minuto. O MouseFix desfez todas, ", $"\"{program}\" changed the acceleration or the speed several times in the last minute. MouseFix undid them all, ") +
+            L.T("mas se a mira oscilar, procure a opção de mouse nesse programa.", "but if your aim wobbles, look for the mouse option in that program."));
 
         _window = new MainWindow(_service, settings, monitor, history, gameMode);
         _window.HiddenToTray += OnHiddenToTray;
         _window.CheckForUpdatesRequested += (_, _) => CheckForUpdates(force: true);
         // The update is downloaded, verified and handed over: close so the new version can take our place.
         _window.UpdateHandedOver += (_, _) => ExitApp();
+        _window.RestartRequested += (_, _) =>
+        {
+            SelfUpdater.Restart();
+            ExitApp();
+        };
 
         _tray = new TrayIcon(open: ShowMainWindow, fixNow: FixNow, report: () => ProblemReporter.Open(_service, monitor), exit: ExitApp);
 
@@ -155,8 +161,8 @@ public partial class App : Application
         {
             string version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "";
             Log.Info($"MouseFix atualizado para a versão {version}.");
-            history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix, $"MouseFix atualizado para a versão {version}", true));
-            _tray?.Notify("MouseFix atualizado", $"Agora você está na versão {version}.");
+            history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix, L.T($"MouseFix atualizado para a versão {version}", $"MouseFix updated to version {version}"), true));
+            _tray?.Notify(L.T("MouseFix atualizado", "MouseFix updated"), L.T($"Agora você está na versão {version}.", $"You are now on version {version}."));
         }
     }
 
@@ -181,7 +187,7 @@ public partial class App : Application
                 if (_settings.NotifiedUpdateVersion != version)
                 {
                     _settings.NotifiedUpdateVersion = version;
-                    _tray?.Notify($"MouseFix {version} disponível", "Abra o MouseFix e clique em \"Baixar\" para atualizar.");
+                    _tray?.Notify(L.T($"MouseFix {version} disponível", $"MouseFix {version} is available"), L.T("Abra o MouseFix e clique em \"Baixar\" para atualizar.", "Open MouseFix and click \"Update now\" to update."));
                 }
             }
             _settings.Save(AppSettings.DefaultPath);
@@ -197,9 +203,9 @@ public partial class App : Application
     private void OnProfileChanged(object? sender, EventArgs e)
     {
         _window.Refresh();
-        _tray?.Notify("Velocidade do ponteiro", _monitor.ActiveProfile is { } p
-            ? $"{p.DisplayName} aberto: velocidade {p.Speed}/20, sem aceleração."
-            : $"Velocidade padrão: {_service.TargetSpeed}/20, sem aceleração.");
+        _tray?.Notify(L.T("Velocidade do ponteiro", "Pointer speed"), _monitor.ActiveProfile is { } p
+            ? L.T($"{p.DisplayName} aberto: velocidade {p.Speed}/20, sem aceleração.", $"{p.DisplayName} open: speed {p.Speed}/20, no acceleration.")
+            : L.T($"Velocidade padrão: {_service.TargetSpeed}/20, sem aceleração.", $"Default speed: {_service.TargetSpeed}/20, no acceleration."));
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -244,7 +250,7 @@ public partial class App : Application
     {
         try
         {
-            _tray?.Notify("Aceleração removida", _window.RemoveAccelerationNow());
+            _tray?.Notify(L.T("Aceleração removida", "Acceleration removed"), _window.RemoveAccelerationNow());
         }
         catch (Exception ex)
         {
@@ -269,8 +275,8 @@ public partial class App : Application
         if (DateTime.Now - _lastReapplyNotice < NotifyCooldown)
             return;
         _lastReapplyNotice = DateTime.Now;
-        _tray?.Notify("Configuração do mouse restaurada",
-            $"Outro programa mudou o mouse ({_monitor.LastExternalChange ?? "aceleração ou velocidade"}) e o MouseFix desfez.");
+        _tray?.Notify(L.T("Configuração do mouse restaurada", "Mouse settings restored"),
+            L.T($"Outro programa mudou o mouse ({_monitor.LastExternalChange ?? "aceleração ou velocidade"}) e o MouseFix desfez.", $"Another program changed the mouse ({_monitor.LastExternalChange ?? "acceleration or speed"}) and MouseFix undid it."));
     }
 
     private void OnHiddenToTray(object? sender, EventArgs e)
@@ -278,7 +284,7 @@ public partial class App : Application
         if (_toldAboutTray)
             return;
         _toldAboutTray = true;
-        _tray?.Notify("MouseFix continua ativo", "Ele fica na bandeja protegendo sua configuração. Use \"Sair\" no menu para fechar.");
+        _tray?.Notify(L.T("MouseFix continua ativo", "MouseFix is still running"), L.T("Ele fica na bandeja protegendo sua configuração. Use \"Sair\" no menu para fechar.", "It stays in the tray protecting your settings. Use \"Exit\" in the menu to close it."));
     }
 
     // Raised on Windows shutdown/logoff and when an installer or uninstaller asks the app to close
@@ -295,7 +301,7 @@ public partial class App : Application
     {
         Log.Error("Erro inesperado", e.Exception);
         MessageBox.Show(
-            $"Ocorreu um erro inesperado e o MouseFix será fechado.\n\n{e.Exception.GetBaseException().Message}",
+            L.T($"Ocorreu um erro inesperado e o MouseFix será fechado.\n\n{e.Exception.GetBaseException().Message}", $"An unexpected error happened and MouseFix will close.\n\n{e.Exception.GetBaseException().Message}"),
             "MouseFix", MessageBoxButton.OK, MessageBoxImage.Error);
 
         e.Handled = true;

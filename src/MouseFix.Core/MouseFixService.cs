@@ -68,7 +68,7 @@ public sealed class MouseFixService
     {
         var current = _store.Read();
         var target = BuildTarget(current);
-        return current.Equals(target) ? null : SettingsChange.Describe(current, target, "escolhida");
+        return current.Equals(target) ? null : SettingsChange.Describe(current, target, L.T("escolhida", "chosen"));
     }
 
     /// <summary>
@@ -110,6 +110,6 @@ public sealed class MouseFixService
         var current = _store.Read();
         // A backup without scroll lines (made by older versions) doesn't touch scrolling, so don't check it.
         var expected = original.ScrollLines is null ? original with { ScrollLines = current.ScrollLines } : original;
-        return current.Equals(expected) ? null : SettingsChange.Describe(current, expected, "original");
+        return current.Equals(expected) ? null : SettingsChange.Describe(current, expected, L.T("original", "original"));
     }
 }

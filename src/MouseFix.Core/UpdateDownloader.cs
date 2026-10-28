@@ -17,7 +17,7 @@ public static class UpdateDownloader
         http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MouseFix", "update"));
 
         string expected = ParseSha256(await http.GetStringAsync(checksumUrl, cancellationToken))
-            ?? throw new InvalidDataException("O arquivo de verificação (SHA-256) da versão nova está vazio ou inválido.");
+            ?? throw new InvalidDataException(L.T("O arquivo de verificação (SHA-256) da versão nova está vazio ou inválido.", "The new version's check file (SHA-256) is empty or invalid."));
 
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         using (var response = await http.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
@@ -41,7 +41,7 @@ public static class UpdateDownloader
         if (!HashMatches(destination, expected))
         {
             File.Delete(destination);
-            throw new InvalidDataException("O arquivo baixado não confere com o SHA-256 da versão nova; ele foi apagado e nada foi instalado.");
+            throw new InvalidDataException(L.T("O arquivo baixado não confere com o SHA-256 da versão nova; ele foi apagado e nada foi instalado.", "The downloaded file doesn't match the new version's SHA-256; it was deleted and nothing was installed."));
         }
     }
 

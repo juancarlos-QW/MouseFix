@@ -2,32 +2,33 @@
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="Teste de distância" Width="540" SizeToContent="Height" ResizeMode="CanMinimize"
+                 xmlns:l="clr-namespace:MouseFix.App"
+                 Title="{l:T 'Teste de distância', En='Distance test'}" Width="540" SizeToContent="Height" ResizeMode="CanMinimize"
                  WindowStartupLocation="CenterOwner" Icon="pack://application:,,,/Assets/mousefix.ico"
                  ExtendsContentIntoTitleBar="True" WindowBackdropType="None" WindowCornerPreference="Round"
                  Background="{StaticResource MfWindowBackground}">
     <DockPanel>
-        <ui:TitleBar DockPanel.Dock="Top" Title="Teste de distância" ShowMaximize="False" ShowMinimize="False" />
+        <ui:TitleBar DockPanel.Dock="Top" Title="{l:T 'Teste de distância', En='Distance test'}" ShowMaximize="False" ShowMinimize="False" />
 
         <StackPanel Margin="20,4,20,20">
             <TextBlock Style="{StaticResource MfMutedText}"
-                       Text="Verifica se o mouse ou o driver dele (ex.: Razer Synapse) aplica aceleração antes do Windows, e mede o DPI real e o polling rate." />
+                       Text="{l:T 'Verifica se o mouse ou o driver dele (ex.: Razer Synapse) aplica aceleração antes do Windows, e mede o DPI real e o polling rate.', En='Checks whether the mouse or its driver (e.g. Razer Synapse) adds acceleration before Windows, and measures the real DPI and the polling rate.'}" />
 
             <Border Style="{StaticResource MfPanelStyle}" Padding="18,14" Margin="0,14,0,0">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource MfTitleText}" Text="Como fazer" />
+                    <TextBlock Style="{StaticResource MfTitleText}" Text="{l:T 'Como fazer', En='How to do it'}" />
                     <TextBlock Style="{StaticResource MfBodyText}" Margin="0,8,0,0"
-                               Text="1. Encoste o mouse numa régua ou marque dois pontos no mousepad. Informe a distância abaixo." />
+                               Text="{l:T '1. Encoste o mouse numa régua ou marque dois pontos no mousepad. Informe a distância abaixo.', En='1. Put the mouse against a ruler or mark two points on the mousepad. Enter the distance below.'}" />
                     <TextBlock Style="{StaticResource MfBodyText}" Margin="0,4,0,0"
-                               Text="2. Com o cursor na área abaixo, segure o botão esquerdo, arraste de uma marca até a outra e solte." />
+                               Text="{l:T '2. Com o cursor na área abaixo, segure o botão esquerdo, arraste de uma marca até a outra e solte.', En='2. With the cursor in the area below, hold the left button, drag from one mark to the other and let go.'}" />
                     <TextBlock Style="{StaticResource MfBodyText}" Margin="0,4,0,0"
-                               Text="3. Faça 2 ou mais bem devagar (uns 2 segundos cada) e 2 ou mais bem rápidas, sempre a mesma distância." />
+                               Text="{l:T '3. Faça 2 ou mais bem devagar (uns 2 segundos cada) e 2 ou mais bem rápidas, sempre a mesma distância.', En='3. Do 2 or more very slowly (about 2 seconds each) and 2 or more very fast, always the same distance.'}" />
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="90" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Distância entre as marcas (cm)" Style="{StaticResource MfBodyText}" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T 'Distância entre as marcas (cm)', En='Distance between the marks (cm)'}" Style="{StaticResource MfBodyText}" VerticalAlignment="Center" />
                         <ui:TextBox x:Name="DistanceBox" Grid.Column="1" Text="10" TextChanged="DistanceBox_TextChanged" />
                     </Grid>
                 </StackPanel>
@@ -36,14 +37,14 @@
             <Border x:Name="TestArea" Height="110" Margin="0,12,0,0" Style="{StaticResource MfTestAreaStyle}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ui:SymbolIcon Symbol="Ruler24" FontSize="26" Foreground="{StaticResource MfAccent}" HorizontalAlignment="Center" />
-                    <TextBlock x:Name="AreaHint" Text="Segure o botão esquerdo aqui e arraste"
+                    <TextBlock x:Name="AreaHint" Text="{l:T 'Segure o botão esquerdo aqui e arraste', En='Hold the left button here and drag'}"
                                Style="{StaticResource MfMutedText}" FontWeight="SemiBold" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource MfPanelStyle}" Padding="18,14" Margin="0,12,0,0">
                 <StackPanel>
-                    <TextBlock x:Name="StrokesText" FontFamily="Consolas" Style="{StaticResource MfBodyText}" Text="Nenhuma arrastada ainda." />
+                    <TextBlock x:Name="StrokesText" FontFamily="Consolas" Style="{StaticResource MfBodyText}" Text="{l:T 'Nenhuma arrastada ainda.', En='No drags yet.'}" />
                     <Border Style="{StaticResource MfDividerStyle}" Margin="0,12" />
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -54,7 +55,7 @@
                             <RowDefinition />
                             <RowDefinition />
                         </Grid.RowDefinitions>
-                        <TextBlock Text="DPI medido" Style="{StaticResource MfMutedText}" />
+                        <TextBlock Text="{l:T 'DPI medido', En='Measured DPI'}" Style="{StaticResource MfMutedText}" />
                         <TextBlock x:Name="DpiValue" Grid.Column="1" Style="{StaticResource MfTitleText}" Text="—" />
                         <TextBlock Grid.Row="1" Text="Polling rate" Style="{StaticResource MfMutedText}" Margin="0,8,0,0" />
                         <TextBlock x:Name="PollingValue" Grid.Row="1" Grid.Column="1" Style="{StaticResource MfTitleText}" Text="—" Margin="0,8,0,0" />
@@ -76,7 +77,7 @@
                 </Grid>
             </Border>
 
-            <ui:Button Content="Recomeçar" Icon="{ui:SymbolIcon ArrowReset24}" HorizontalAlignment="Right"
+            <ui:Button Content="{l:T 'Recomeçar', En='Start over'}" Icon="{ui:SymbolIcon ArrowReset24}" HorizontalAlignment="Right"
                        Margin="0,14,0,0" Click="ResetButton_Click" />
         </StackPanel>
     </DockPanel>

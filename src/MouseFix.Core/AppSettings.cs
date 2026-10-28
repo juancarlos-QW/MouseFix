@@ -59,6 +59,9 @@ public sealed class AppSettings
 
     public DateTime? MeasuredDpiDate { get; set; }
 
+    /// <summary>"pt" or "en"; null follows the Windows language.</summary>
+    public string? Language { get; set; }
+
     public static string DefaultPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MouseFix", "settings.json");
 

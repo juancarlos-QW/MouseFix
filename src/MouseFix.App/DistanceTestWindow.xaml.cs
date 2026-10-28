@@ -79,29 +79,29 @@ public partial class DistanceTestWindow : FluentWindow
     {
         var strokes = _analyzer.Strokes;
         StrokesText.Text = strokes.Count == 0
-            ? "Nenhuma arrastada ainda."
+            ? L.T("Nenhuma arrastada ainda.", "No drags yet.")
             : string.Join("\n", strokes.Select((s, i) =>
-                $"#{i + 1,-3} {s.Counts,7:0} pontos   {s.DurationMs / 1000,5:0.00} s   {Speed(s),5:0} cm/s"));
+                L.T($"#{i + 1,-3} {s.Counts,7:0} pontos   {s.DurationMs / 1000,5:0.00} s   {Speed(s),5:0} cm/s", $"#{i + 1,-3} {s.Counts,7:0} counts   {s.DurationMs / 1000,5:0.00} s   {Speed(s),5:0} cm/s")));
 
         DpiValue.Text = _analyzer.Dpi is double dpi ? $"{dpi:0} DPI" : "—";
         PollingValue.Text = _analyzer.PollingHz is double hz ? $"~{RoundPolling(hz)} Hz" : "—";
-        AreaHint.Text = strokes.Count == 0 ? "Segure o botão esquerdo aqui e arraste" : $"{strokes.Count} arrastada(s) registrada(s)";
+        AreaHint.Text = strokes.Count == 0 ? L.T("Segure o botão esquerdo aqui e arraste", "Hold the left button here and drag") : L.T($"{strokes.Count} arrastada(s) registrada(s)", $"{strokes.Count} drag(s) recorded");
 
         double diff = ((_analyzer.FastToSlowRatio ?? 1) - 1) * 100;
         (SymbolRegular icon, string brush, string title, string subtitle) = _analyzer.Verdict switch
         {
             DistanceVerdict.Consistent => (SymbolRegular.CheckmarkCircle24, "MfSuccess",
-                "Sem aceleração no mouse ou no driver",
-                $"Rápido e devagar deram a mesma contagem (diferença de {diff:+0;-0;0}%, dentro do erro de posicionar a mão)."),
+                L.T("Sem aceleração no mouse ou no driver", "No acceleration in the mouse or its driver"),
+                L.T($"Rápido e devagar deram a mesma contagem (diferença de {diff:+0;-0;0}%, dentro do erro de posicionar a mão).", $"Fast and slow gave the same count (difference of {diff:+0;-0;0}%, within the error of placing your hand).")),
             DistanceVerdict.Accelerated => (SymbolRegular.DismissCircle24, "MfDanger",
-                $"Aceleração antes do Windows: rápido conta {diff:0}% a mais",
-                "Procure opções de aceleração ou \"precisão aprimorada\" no software do mouse (ex.: Razer Synapse) e desligue."),
+                L.T($"Aceleração antes do Windows: rápido conta {diff:0}% a mais", $"Acceleration before Windows: fast counts {diff:0}% more"),
+                L.T("Procure opções de aceleração ou \"precisão aprimorada\" no software do mouse (ex.: Razer Synapse) e desligue.", "Look for acceleration or \"enhanced precision\" options in the mouse software (e.g. Razer Synapse) and turn them off.")),
             DistanceVerdict.LosingCounts => (SymbolRegular.Warning24, "MfWarning",
-                $"Movimentos rápidos contaram {-diff:0}% a menos",
-                "Confira se as arrastadas rápidas foram até a marca. Se foram, o sensor pode estar perdendo rastreamento: limpe o sensor e o mousepad."),
+                L.T($"Movimentos rápidos contaram {-diff:0}% a menos", $"Fast moves counted {-diff:0}% less"),
+                L.T("Confira se as arrastadas rápidas foram até a marca. Se foram, o sensor pode estar perdendo rastreamento: limpe o sensor e o mousepad.", "Check that the fast drags reached the mark. If they did, the sensor may be losing tracking: clean the sensor and the mousepad.")),
             _ => (SymbolRegular.Ruler24, "MfTextMuted",
-                "Coletando arrastadas…",
-                $"Faça pelo menos {DistanceTestAnalyzer.MinStrokesPerGroup} bem devagar e {DistanceTestAnalyzer.MinStrokesPerGroup} bem rápidas (as rápidas precisam ser bem mais rápidas que as lentas)."),
+                L.T("Coletando arrastadas…", "Collecting drags…"),
+                L.T($"Faça pelo menos {DistanceTestAnalyzer.MinStrokesPerGroup} bem devagar e {DistanceTestAnalyzer.MinStrokesPerGroup} bem rápidas (as rápidas precisam ser bem mais rápidas que as lentas).", $"Do at least {DistanceTestAnalyzer.MinStrokesPerGroup} very slow and {DistanceTestAnalyzer.MinStrokesPerGroup} very fast ones (the fast ones must be much faster than the slow ones).")),
         };
         VerdictIcon.Symbol = icon;
         VerdictIcon.SetResourceReference(ForegroundProperty, brush);
