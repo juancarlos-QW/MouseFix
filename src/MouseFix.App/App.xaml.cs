@@ -76,6 +76,14 @@ public partial class App : Application
             return;
         }
 
+        // An older MouseFix is running (e.g. an old copy that starts with Windows): this newer one takes its place.
+        Version? replacedVersion = null;
+        if (!isFirstInstance && OlderCopies.TakeOver(_instanceMutex, InstanceName + ".Exit") is Version replaced)
+        {
+            replacedVersion = replaced;
+            isFirstInstance = true;
+        }
+
         if (!isFirstInstance)
         {
             // Already running (e.g. started with Windows): ask that instance to show itself.
@@ -114,6 +122,28 @@ public partial class App : Application
         _service = new MouseFixService(store, new BackupStore(BackupStore.DefaultPath),
             () => new TargetOptions(monitor?.ActiveProfile?.Speed ?? settings.PointerSpeed, settings.AccelerationEnabled, settings.ScrollLines));
         var history = _history = new ChangeHistory(ChangeHistory.DefaultPath);
+        string thisVersion = OlderCopies.CurrentVersion.ToString(3);
+        if (replacedVersion is not null)
+        {
+            history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix,
+                L.T($"MouseFix {replacedVersion.ToString(3)} antigo estava aberto e foi fechado; a versão {thisVersion} assumiu",
+                    $"An old MouseFix {replacedVersion.ToString(3)} was running and was closed; version {thisVersion} took over"), true));
+            Log.Info($"MouseFix {replacedVersion.ToString(3)} antigo fechado; {thisVersion} assumiu.");
+        }
+        try
+        {
+            if (OlderCopies.PointAutoStartHere() is string oldExe)
+            {
+                history.Add(new ChangeEntry(DateTime.Now, ChangeSource.MouseFix,
+                    L.T($"\"Iniciar com o Windows\" agora abre esta versão ({thisVersion}), não a cópia antiga em {oldExe}",
+                        $"\"Start with Windows\" now opens this version ({thisVersion}), not the old copy at {oldExe}"), true));
+                Log.Info($"Iniciar com o Windows apontava para {oldExe}; agora aponta para esta cópia.");
+            }
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            Log.Error("Não foi possível atualizar o Iniciar com o Windows", ex);
+        }
         var gameMode = _gameMode = new GameModeService(new WindowsPowerPlans(), settings, () => settings.Save(AppSettings.DefaultPath));
         _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles, history,
             gameMode, () => settings.GameModeWithEmulator);
