@@ -32,6 +32,18 @@ public sealed class AppSettings
     /// <summary>True when game mode is on because an emulator opened (it turns off again when the emulator closes).</summary>
     public bool GameModeAutomatic { get; set; }
 
+    /// <summary>Focus mode while an emulator runs: other programs slowed down, picked apps closed (see <see cref="FocusMode"/>).</summary>
+    public bool FocusModeWithEmulator { get; set; }
+
+    /// <summary>Keys of the <see cref="FocusMode.ClosableApps"/> the user wants closed during focus mode.</summary>
+    public List<string> FocusCloseApps { get; set; } = [.. FocusMode.DefaultCloseApps];
+
+    /// <summary>Programs focus mode slowed down ("pid:start time"), kept so they go back to normal even after a crash.</summary>
+    public List<string> FocusThrottled { get; set; } = [];
+
+    /// <summary>Apps focus mode closed ("key|exe path"), to reopen when the emulator closes.</summary>
+    public List<string> FocusClosed { get; set; } = [];
+
     /// <summary>Check GitHub for a newer release at most once a day.</summary>
     public bool CheckForUpdates { get; set; } = true;
 

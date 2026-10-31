@@ -23,6 +23,7 @@ public partial class App : Application
     private EventWaitHandle? _exitEvent;
     private MouseFixService _service = null!;
     private ProtectionMonitor _monitor = null!;
+    private FocusModeController? _focus;
     private AppSettings _settings = null!;
     private ChangeHistory? _history;
     private GameModeService? _gameMode;
@@ -145,8 +146,9 @@ public partial class App : Application
             Log.Error("Não foi possível atualizar o Iniciar com o Windows", ex);
         }
         var gameMode = _gameMode = new GameModeService(new WindowsPowerPlans(), settings, () => settings.Save(AppSettings.DefaultPath));
+        var focus = _focus = new FocusModeController(settings, () => settings.Save(AppSettings.DefaultPath));
         _monitor = monitor = new ProtectionMonitor(_service, () => settings.AutoReapply, () => settings.Profiles, history,
-            gameMode, () => settings.GameModeWithEmulator);
+            gameMode, () => settings.GameModeWithEmulator, focus, () => settings.FocusModeWithEmulator);
         monitor.Reapplied += OnReapplied;
         monitor.ProfileChanged += OnProfileChanged;
         monitor.GameModeChanged += (_, _) =>
@@ -156,6 +158,7 @@ public partial class App : Application
                 ? L.T($"Plano de energia \"{GameModeService.PlanName}\" ativado: desempenho máximo.", $"Power plan \"{GameModeService.PlanName}\" on: maximum performance.")
                 : L.T($"Plano de energia de volta para \"{gameMode.ActivePlanName}\".", $"Power plan back to \"{gameMode.ActivePlanName}\"."));
         };
+        monitor.FocusModeChanged += (_, description) => _tray?.Notify(L.T("Modo foco", "Focus mode"), description);
         monitor.FightDetected += (_, program) => _tray?.Notify(
             L.T("Um programa está mudando o seu mouse", "A program keeps changing your mouse"),
             L.T($"\"{program}\" mudou a aceleração ou a velocidade várias vezes no último minuto. O MouseFix desfez todas, ", $"\"{program}\" changed the acceleration or the speed several times in the last minute. MouseFix undid them all, ") +
@@ -252,6 +255,16 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log.Error("Não foi possível desligar o modo jogo ao sair", ex);
+        }
+        // Same for focus mode: the slowed-down programs and closed apps go back now.
+        try
+        {
+            if (_focus is { } focus && (focus.IsActive || focus.HasLeftovers))
+                Log.Info(focus.Stop());
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Não foi possível desligar o modo foco ao sair", ex);
         }
         _history?.Flush();
         _tray?.Dispose();

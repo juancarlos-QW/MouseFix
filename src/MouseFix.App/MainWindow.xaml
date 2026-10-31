@@ -170,6 +170,17 @@
                                 <TextBlock Foreground="White" TextWrapping="Wrap"
                                            Text="{l:T 'Ativar sozinho quando um emulador abrir (e voltar ao plano normal quando fechar)', En='Turn on by itself when an emulator opens (and go back to the normal plan when it closes)'}" />
                             </CheckBox>
+                            <!-- Focus mode: other programs slowed down while an emulator runs, picked apps closed -->
+                            <CheckBox x:Name="FocusModeCheck" Margin="0,10,0,0"
+                                      Checked="FocusModeCheck_Changed" Unchecked="FocusModeCheck_Changed">
+                                <TextBlock Foreground="White" TextWrapping="Wrap"
+                                           Text="{l:T 'Modo foco com o emulador: os outros programas ficam com menos processador e devolvem a memória parada. Nada é fechado sem você escolher, e tudo volta quando o emulador fechar', En='Focus mode with the emulator: other programs get less of the processor and give back idle memory. Nothing is closed unless you pick it, and everything goes back when the emulator closes'}" />
+                            </CheckBox>
+                            <StackPanel x:Name="FocusAppsPanel" Margin="28,6,0,0">
+                                <TextBlock Style="{StaticResource Muted}" FontSize="13"
+                                           Text="{l:T 'Fechar também, se estiverem abertos (reabrem sozinhos depois):', En='Also close, if open (they reopen by themselves afterwards):'}" />
+                                <WrapPanel x:Name="FocusAppsList" Margin="0,2,0,0" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

@@ -50,6 +50,16 @@ public partial class MainWindow : FluentWindow
         SpeedSlider.Value = settings.PointerSpeed;
         AccelToggle.IsChecked = settings.AccelerationEnabled;
         GameModeAutoCheck.IsChecked = settings.GameModeWithEmulator;
+        FocusModeCheck.IsChecked = settings.FocusModeWithEmulator;
+        FocusAppsPanel.IsEnabled = settings.FocusModeWithEmulator;
+        foreach (var app in FocusMode.ClosableApps)
+        {
+            var check = new CheckBox { Content = app.DisplayName, Tag = app.Key, Margin = new Thickness(0, 4, 16, 0),
+                IsChecked = settings.FocusCloseApps.Contains(app.Key) };
+            check.Checked += FocusAppCheck_Changed;
+            check.Unchecked += FocusAppCheck_Changed;
+            FocusAppsList.Children.Add(check);
+        }
         AboutText.Text = $"MouseFix {CurrentVersion.ToString(3)}";
         TitleVersion.Text = $"v{CurrentVersion.ToString(3)}";
         LanguageBox.SelectedItem = LanguageBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == (settings.Language ?? ""))
@@ -420,6 +430,29 @@ public partial class MainWindow : FluentWindow
             if (_settings.GameModeWithEmulator)
                 _monitor.RecheckEmulator();
         });
+    }
+
+    private void FocusModeCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        Run(() =>
+        {
+            _settings.FocusModeWithEmulator = FocusModeCheck.IsChecked == true;
+            FocusAppsPanel.IsEnabled = _settings.FocusModeWithEmulator;
+            _settings.Save(AppSettings.DefaultPath);
+            Log.Info($"Modo foco com emulador: {(_settings.FocusModeWithEmulator ? "ligado" : "desligado")}");
+            // With the emulator already open, turning it on (or off) takes effect now.
+            _monitor.UpdateFocusMode();
+        });
+    }
+
+    private void FocusAppCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        _settings.FocusCloseApps = FocusAppsList.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (string)c.Tag).ToList();
+        _settings.Save(AppSettings.DefaultPath);
     }
 
     private static string SpeedLabel(int speed) => speed == MouseSettings.OneToOneSpeed

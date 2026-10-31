@@ -48,8 +48,15 @@ public sealed class ProtectionMonitor
     // Emulator processes whose priority MouseFix raised, so only those go back to normal (not ones the user set).
     private readonly HashSet<int> _raisedPriority = [];
 
+    private readonly FocusModeController _focus;
+    private readonly Func<bool> _focusWithEmulator;
+    // Programs opened during the game are caught every few process checks (seconds).
+    private const int FocusCatchEveryChecks = 5;
+    private int _focusChecks;
+
     public ProtectionMonitor(MouseFixService service, Func<bool> isEnabled, Func<IReadOnlyList<SpeedProfile>> profiles,
-        ChangeHistory history, GameModeService gameMode, Func<bool> gameModeWithEmulator)
+        ChangeHistory history, GameModeService gameMode, Func<bool> gameModeWithEmulator,
+        FocusModeController focus, Func<bool> focusWithEmulator)
     {
         _service = service;
         _isEnabled = isEnabled;
@@ -57,6 +64,8 @@ public sealed class ProtectionMonitor
         _history = history;
         _gameMode = gameMode;
         _gameModeWithEmulator = gameModeWithEmulator;
+        _focus = focus;
+        _focusWithEmulator = focusWithEmulator;
         _hook = WndProc;
         _timer.Tick += (_, _) => OnTick();
     }
@@ -129,6 +138,31 @@ public sealed class ProtectionMonitor
         Log.Info(problem is null ? description : $"{description} — falhou: {problem}");
     }
 
+    /// <summary>Raised when focus mode turned on or off; the argument is what was done.</summary>
+    public event EventHandler<string>? FocusModeChanged;
+
+    /// <summary>
+    /// Brings focus mode in line with the setting and the emulator: on while an emulator runs and the option is on,
+    /// otherwise off (everything put back).
+    /// </summary>
+    public void UpdateFocusMode()
+    {
+        bool want = EmulatorRunning && _focusWithEmulator();
+        if (want && !_focus.IsActive)
+            RecordFocus(_focus.Start());
+        else if (!want && (_focus.IsActive || _focus.HasLeftovers))
+            RecordFocus(_focus.Stop());
+        else if (want && ++_focusChecks % FocusCatchEveryChecks == 0 && _focus.CatchNew() is int caught and > 0)
+            Log.Info($"Modo foco: {FocusMode.Programs(caught)} aberto(s) durante o jogo com menos prioridade");
+    }
+
+    private void RecordFocus(string description)
+    {
+        _history.Add(new ChangeEntry(DateTime.Now, ChangeSource.GameMode, description, true));
+        Log.Info(description);
+        FocusModeChanged?.Invoke(this, description);
+    }
+
     /// <summary>Emulator opened → game mode on (if enabled and not already on); emulator closed → back to the previous plan.</summary>
     private void HandleEmulator(HashSet<string> running)
     {
@@ -137,6 +171,7 @@ public sealed class ProtectionMonitor
         bool wasRunning = _emulatorWasRunning ?? false;
         bool firstCheck = _emulatorWasRunning is null;
         _emulatorWasRunning = isRunning;
+        UpdateFocusMode();
 
         // MouseFix restarted (or crashed) after turning game mode on for an emulator that is now closed.
         if (firstCheck && !isRunning && _gameMode.ActivatedAutomatically)
