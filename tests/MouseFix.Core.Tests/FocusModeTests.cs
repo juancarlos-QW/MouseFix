@@ -28,6 +28,8 @@ public class FocusModeTests
     [InlineData("RazerAppEngine")]
     [InlineData("Discord")]
     [InlineData("obs64")]
+    [InlineData("AutoHotkey64")]
+    [InlineData("voicemeeter8x64")]
     [InlineData("MouseFix")]
     public void EmulatorMouseVoiceAndStreamingAreLeftAlone(string name) =>
         Assert.False(FocusMode.MayThrottle(name, $@"C:\Program Files\X\{name}.exe", Windows));

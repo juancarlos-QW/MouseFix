@@ -24,14 +24,17 @@ public static class FocusMode
 
     public static IReadOnlyList<string> DefaultCloseApps => ["OneDrive", "Epic"];
 
-    // Never slowed down: the emulator and its helpers, mouse software, voice chat and streaming (a call must not
-    // break up during the game), graphics and audio tools, and MouseFix itself.
+    // Never slowed down: the emulator and its helpers, mouse software, macros and controller mappers (input must not
+    // lag), voice chat, music, streaming and recording (a call must not break up during the game), graphics and
+    // audio tools, and MouseFix itself.
     private static readonly string[] ProtectedPrefixes =
     [
         "HD-", "Bstk", "BlueStacks", "dnplayer", "Ld", "MuMu", "Nemu", "AndroidEmulator", "aow_exe", "QMEmulator",
         "Razer", "lghub", "LCore", "iCUE", "SteelSeries", "NGenuity", "Swarm", "ArmouryCrate", "Bloody",
-        "Discord", "TeamSpeak", "ts3client", "Mumble", "Spotify", "obs", "Streamlabs",
-        "nvcontainer", "NVIDIA", "nvsphelper", "RadeonSoftware", "amdow", "Rtk", "Nahimic",
+        "AutoHotkey", "DS4Windows", "JoyToKey", "x360ce",
+        "Discord", "TeamSpeak", "ts3client", "Mumble", "Spotify", "obs", "Streamlabs", "XSplit", "Medal", "bdcam",
+        "nvcontainer", "NVIDIA", "nvsphelper", "RadeonSoftware", "AMDRS", "amdow",
+        "Rtk", "Nahimic", "Dolby", "voicemeeter",
         "MouseFix", "Taskmgr",
     ];
 

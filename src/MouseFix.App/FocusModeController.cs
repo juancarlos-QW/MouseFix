@@ -60,7 +60,8 @@ public sealed class FocusModeController
     public int CatchNew() => IsActive ? ThrottleNew() : 0;
 
     /// <summary>Puts everything back. Returns what was done, for the history.</summary>
-    public string Stop()
+    /// <param name="reopenApps">False while Windows shuts down: the apps start with Windows by themselves next time.</param>
+    public string Stop(bool reopenApps = true)
     {
         IsActive = false;
         _seen.Clear();
@@ -76,7 +77,7 @@ public sealed class FocusModeController
         {
             var parts = entry.Split('|', 2);
             var app = FocusMode.ClosableApps.FirstOrDefault(a => a.Key == parts[0]);
-            if (app is not null && parts.Length == 2 && Reopen(app, parts[1]))
+            if (reopenApps && app is not null && parts.Length == 2 && Reopen(app, parts[1]))
                 reopened.Add(app.DisplayName);
         }
         _settings.FocusThrottled.Clear();
@@ -101,11 +102,12 @@ public sealed class FocusModeController
                 {
                     try
                     {
-                        if (p.SessionId != _session)
+                        if (p.SessionId != _session || ExePath(p.Id) is not string path)
                             continue;
-                        exe ??= ExePath(p.Id);
+                        // Only the app itself, not its process tree: a game it started must keep running.
                         if (app.CloseArguments is null)
-                            p.Kill(entireProcessTree: true);
+                            p.Kill();
+                        exe ??= path;
                     }
                     catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
                     {
@@ -114,7 +116,7 @@ public sealed class FocusModeController
                 }
             }
             if (exe is null)
-                continue;
+                continue; // not open, or couldn't be closed
             try
             {
                 // Apps that can close themselves are asked to, so they save their state first.

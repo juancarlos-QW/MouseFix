@@ -24,6 +24,8 @@ public partial class App : Application
     private MouseFixService _service = null!;
     private ProtectionMonitor _monitor = null!;
     private FocusModeController? _focus;
+    // Windows is signing out or shutting down: don't start apps on the way out.
+    private bool _sessionEnding;
     private AppSettings _settings = null!;
     private ChangeHistory? _history;
     private GameModeService? _gameMode;
@@ -260,7 +262,7 @@ public partial class App : Application
         try
         {
             if (_focus is { } focus && (focus.IsActive || focus.HasLeftovers))
-                Log.Info(focus.Stop());
+                Log.Info(focus.Stop(reopenApps: !_sessionEnding));
         }
         catch (Exception ex)
         {
@@ -334,6 +336,7 @@ public partial class App : Application
     // (Restart Manager). The window normally hides to the tray on close; here it must really exit.
     private void App_SessionEnding(object sender, SessionEndingCancelEventArgs e)
     {
+        _sessionEnding = true;
         if (_window is not null)
             _window.AllowClose = true;
         Shutdown();
